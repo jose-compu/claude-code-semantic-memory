@@ -1,8 +1,8 @@
 ---
 name: semantic-memory
-description: "LogosDB semantic memory via bundled MCP: scripts/logosdb-mcp-wrap.sh sets LOGOSDB_PATH from CLAUDE_PROJECT_DIR (fixes user-scope plugin cwd in cache). logosdb-mcp-server. User-invoked /index /search /forget. Triggers: semantic memory, LogosDB, logosdb MCP, semantic-memory plugin."
+description: "LogosDB semantic memory via bundled MCP: wrap.sh cds to CLAUDE_PROJECT_DIR, sets LOGOSDB_PATH and LOGOSDB_INDEX_ROOT, runs npm exec/npx logosdb-mcp-server. User-invoked /index /search /forget. Fallback: project .claude/mcp.json. Triggers: semantic memory, LogosDB, logosdb MCP, semantic-memory plugin."
 metadata:
-  version: "0.2.4"
+  version: "0.2.5"
   last_updated: "2026-05-11"
   status: active
   data_access_level: raw
@@ -11,7 +11,7 @@ metadata:
 
 # Semantic memory — LogosDB MCP (plugin)
 
-This plugin ships the **logosdb** MCP server and guidance for **semantic, session-persistent memory** using [`logosdb-mcp-server`](https://www.npmjs.com/package/logosdb-mcp-server). **`mcpServers`** live **inline in `.claude-plugin/plugin.json`** (and are mirrored in root **`.mcp.json`**). User-invoked slash skills use **`skills/<name>/SKILL.md`** per [example-plugin](https://github.com/anthropics/claude-plugins-official/tree/main/plugins/example-plugin). Upstream: [LogosDB README](https://github.com/jose-compu/logosdb/blob/main/README.md#claude-code-complete-recipe), [`mcp/README.md`](https://github.com/jose-compu/logosdb/blob/main/mcp/README.md).
+This plugin ships the **logosdb** MCP server and guidance for **semantic, session-persistent memory** using [`logosdb-mcp-server`](https://www.npmjs.com/package/logosdb-mcp-server). **`mcpServers`** are declared in **`.claude-plugin/plugin.json`** (mirrored in **`.mcp.json`**) per [Claude Code MCP — plugins](https://docs.anthropic.com/en/docs/claude-code/mcp/) (stdio `command` + `args`, typically `npx` + `-y`). This repo uses a small **shell launcher** so **`CLAUDE_PROJECT_DIR`**, **`LOGOSDB_PATH`**, and **`LOGOSDB_INDEX_ROOT`** behave for [user-scoped plugins](https://github.com/anthropics/claude-code/issues/42687). Slash skills: **`skills/<name>/SKILL.md`** ([example-plugin](https://github.com/anthropics/claude-plugins-official/tree/main/plugins/example-plugin)). Upstream: [LogosDB README](https://github.com/jose-compu/logosdb/blob/main/README.md#claude-code-complete-recipe), [`mcp/README.md`](https://github.com/jose-compu/logosdb/blob/main/mcp/README.md).
 
 **Default behavior:** omit `EMBEDDING_PROVIDER` so the server uses **on-device Transformers.js** (`Xenova/all-MiniLM-L6-v2`, 384 dims). First run may download model weights to the normal Transformers.js cache. No cloud API keys are required for that path.
 
@@ -29,10 +29,12 @@ This plugin ships the **logosdb** MCP server and guidance for **semantic, sessio
 
 The MCP entrypoint is **`scripts/logosdb-mcp-wrap.sh`**, which:
 
-1. **`cd`s into `CLAUDE_PROJECT_DIR`** when set (so **`process.cwd()`** matches your repo — required for **`logosdb_index_file`** path rules; see [claude-code#42687](https://github.com/anthropics/claude-code/issues/42687)).
-2. Sets **`LOGOSDB_PATH`** to **`$CLAUDE_PROJECT_DIR/.logosdb`** (or **`$PWD/.logosdb`** if unset).
+1. **`cd`s into `CLAUDE_PROJECT_DIR`** when it is set **and** a directory (so **`process.cwd()`** is your repo — see [claude-code#42687](https://github.com/anthropics/claude-code/issues/42687)).
+2. Sets **`LOGOSDB_PATH`** (default **`$CLAUDE_PROJECT_DIR/.logosdb`**).
+3. Sets **`LOGOSDB_INDEX_ROOT`** to the same project root so **`logosdb_index_file`** can allow project paths even if cwd handling regresses ([`security.ts` indexRoots](https://github.com/jose-compu/logosdb/blob/main/mcp/src/security.ts)).
+4. Runs **`npm exec --yes -- logosdb-mcp-server`** when available, else **`npx --yes logosdb-mcp-server`**, with quieter npm env to reduce **`npx` cache / cleanup** noise.
 
-**Why a wrapper?** User-scoped plugins often started with cwd = **plugin cache**; both the vector root and indexable paths were wrong until **`CLAUDE_PROJECT_DIR`** + **`cd`**.
+**Why a wrapper?** Matches the problem people hit with **plugin MCP + `npx`**: wrong cwd, missing tools, and occasional **`npm warn cleanup`** / non-zero exits from the **npm** driver (not always the server itself). **`claude --debug`** helps distinguish spawn vs protocol errors.
 
 Add **`.logosdb/`** to your project **`.gitignore`** if you do not want vector files committed.
 
@@ -46,11 +48,13 @@ You do **not** need a project **`.claude/mcp.json`** for the bundled server.
 
 | File | Role |
 |------|------|
-| [`.claude-plugin/plugin.json`](../../.claude-plugin/plugin.json) | Plugin metadata + **`mcpServers.logosdb`**: `/bin/sh` + [`scripts/logosdb-mcp-wrap.sh`](../../scripts/logosdb-mcp-wrap.sh) → `npx -y logosdb-mcp-server` |
+| [`.claude-plugin/plugin.json`](../../.claude-plugin/plugin.json) | Plugin metadata + **`mcpServers.logosdb`**: `/bin/sh` + [`scripts/logosdb-mcp-wrap.sh`](../../scripts/logosdb-mcp-wrap.sh) |
 | [`.mcp.json`](../../.mcp.json) (repo root) | Same `mcpServers` block (mirror) |
-| [`scripts/logosdb-mcp-wrap.sh`](../../scripts/logosdb-mcp-wrap.sh) | Sets **`LOGOSDB_PATH`**, logs to stderr, **`exec`** server (stdout reserved for MCP) |
+| [`scripts/logosdb-mcp-wrap.sh`](../../scripts/logosdb-mcp-wrap.sh) | `cd` + **`LOGOSDB_PATH`** + **`LOGOSDB_INDEX_ROOT`** + `npm exec` / `npx` |
 
-**Avoid duplicates:** if the same workspace still defines **`logosdb`** in **`.claude/mcp.json`**, remove one registration or you may spawn two servers.
+**Avoid duplicates:** do **not** register **`logosdb`** twice. Either rely on this plugin **or** merge [references/project-mcp-fallback.json](references/project-mcp-fallback.json) into **`.claude/mcp.json`** and **turn off** this plugin’s MCP (disable the plugin / use project-only MCP) so only one **`logosdb`** server exists.
+
+**Official pattern (reference):** plain stdio block is `command` + `args` — see [Anthropic `server-types.md` (stdio)](https://github.com/anthropics/claude-code/blob/main/plugins/plugin-dev/skills/mcp-integration/references/server-types.md) and [Connect Claude Code to tools via MCP](https://docs.anthropic.com/en/docs/claude-code/mcp/).
 
 **Optional backends** (Ollama, OpenAI, Voyage) and tuning: upstream [`mcp/README.md` — Configure](https://github.com/jose-compu/logosdb/blob/main/mcp/README.md#configure). Edits belong in this plugin’s `.mcp.json` (or your fork), not scattered per project.
 
@@ -62,13 +66,15 @@ You do **not** need a project **`.claude/mcp.json`** for the bundled server.
 npm view logosdb-mcp-server version
 ```
 
-**Smoke test** (stdio normally driven by the client):
+**Smoke test** (stdio is driven by the client; here you only check the process stays up):
 
 ```bash
-LOGOSDB_PATH=/tmp/logosdb-smoke-test npx -y logosdb-mcp-server
+LOGOSDB_PATH=/tmp/logosdb-smoke-test npx --yes logosdb-mcp-server </dev/null &
+sleep 3
+kill %1 2>/dev/null
 ```
 
-(Exit with Ctrl+C after it starts.)
+On macOS, **`timeout`** may be missing; use **`sleep` + `kill`** as above. **`npm warn cleanup`** lines often come from **npm** tearing down a temp **`npx`** tree and do **not** always mean the MCP server crashed (check whether **`logosdb_list`** appears in Claude after **`/reload-plugins`**).
 
 ---
 

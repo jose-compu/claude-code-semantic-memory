@@ -9,8 +9,8 @@
     {
       "name": "semantic-memory",
       "source": "./",
-      "description": "LogosDB MCP (wrap.sh + CLAUDE_PROJECT_DIR), /index /search /forget, skills/semantic-memory.",
-      "version": "0.2.4",
+      "description": "LogosDB MCP (wrap: cd, LOGOSDB_INDEX_ROOT, npm exec/npx), /index /search /forget, fallback JSON.",
+      "version": "0.2.5",
       "license": "MIT"
     }
   ]

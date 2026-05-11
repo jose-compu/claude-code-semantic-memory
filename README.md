@@ -34,7 +34,7 @@ claude-code-semantic-memory/
 
 MCP **`logosdb`** runs **`/bin/sh`** + **`scripts/logosdb-mcp-wrap.sh`** (declared in **`.claude-plugin/plugin.json`** and mirrored in **`.mcp.json`**). The wrapper sets **`LOGOSDB_PATH`** to **`$CLAUDE_PROJECT_DIR/.logosdb`** so user-scoped plugins do not write under the plugin cache cwd ([claude-code#42687](https://github.com/anthropics/claude-code/issues/42687)). One diagnostic line goes to **stderr**; use **`claude --debug`** if tools are missing. Add **`.logosdb/`** to **`.gitignore`**.
 
-**Older Claude Code:** upgrade so **`CLAUDE_PROJECT_DIR`** is set for stdio MCP, or install this plugin with **`--scope project`**.
+**Older Claude Code:** upgrade so **`CLAUDE_PROJECT_DIR`** is set for stdio MCP ([issue #42687](https://github.com/anthropics/claude-code/issues/42687)), or install with **`--scope project`**. MCP wiring matches [Claude Code MCP docs](https://docs.anthropic.com/en/docs/claude-code/mcp/) (stdio + `npx`); this plugin adds a launcher for cwd / **`LOGOSDB_INDEX_ROOT`**. If plugin MCP still fails, use **one** `logosdb` registration: merge [`skills/semantic-memory/references/project-mcp-fallback.json`](skills/semantic-memory/references/project-mcp-fallback.json) into **`.claude/mcp.json`** and disable this plugin to avoid duplicate servers.
 
 ## Slash commands (skills format)
 

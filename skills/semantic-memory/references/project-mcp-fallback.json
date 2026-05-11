@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "logosdb": {
+      "command": "npx",
+      "args": ["-y", "logosdb-mcp-server"],
+      "env": {
+        "LOGOSDB_PATH": "./.logosdb"
+      }
+    }
+  }
+}

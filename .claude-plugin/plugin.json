@@ -1,7 +1,7 @@
 {
   "name": "semantic-memory",
-  "version": "0.2.4",
-  "description": "Semantic memory plugin: LogosDB MCP via scripts/logosdb-mcp-wrap.sh (LOGOSDB_PATH from CLAUDE_PROJECT_DIR), /index /search /forget skills, skills/semantic-memory.",
+  "version": "0.2.5",
+  "description": "Semantic memory plugin: LogosDB MCP (wrap.sh: cd + LOGOSDB_INDEX_ROOT + npm exec/npx), /index /search /forget, skills/semantic-memory + project MCP fallback JSON.",
   "author": {
     "name": "Jose Ignacio",
     "url": "https://github.com/jose-compu"

@@ -1,18 +1,15 @@
 {
   "name": "semantic-memory",
-  "version": "0.2.3",
-  "description": "Semantic memory plugin: LogosDB MCP (mcpServers in this manifest), local embeddings, user-invoked /index /search /forget (skills/index|search|forget), model guidance in skills/semantic-memory.",
+  "version": "0.2.4",
+  "description": "Semantic memory plugin: LogosDB MCP via scripts/logosdb-mcp-wrap.sh (LOGOSDB_PATH from CLAUDE_PROJECT_DIR), /index /search /forget skills, skills/semantic-memory.",
   "author": {
     "name": "Jose Ignacio",
     "url": "https://github.com/jose-compu"
   },
   "mcpServers": {
     "logosdb": {
-      "command": "npx",
-      "args": ["-y", "logosdb-mcp-server"],
-      "env": {
-        "LOGOSDB_PATH": "./.logosdb"
-      }
+      "command": "/bin/sh",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/logosdb-mcp-wrap.sh"]
     }
   },
   "homepage": "https://github.com/jose-compu/claude-code-semantic-memory",

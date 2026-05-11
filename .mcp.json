@@ -1,11 +1,8 @@
 {
   "mcpServers": {
     "logosdb": {
-      "command": "npx",
-      "args": ["-y", "logosdb-mcp-server"],
-      "env": {
-        "LOGOSDB_PATH": "./.logosdb"
-      }
+      "command": "/bin/sh",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/logosdb-mcp-wrap.sh"]
     }
   }
 }

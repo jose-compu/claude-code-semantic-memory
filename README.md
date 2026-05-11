@@ -10,7 +10,9 @@ Structure follows Anthropic’s **[example-plugin](https://github.com/anthropics
 claude-code-semantic-memory/
 ├── .claude-plugin/
 │   └── plugin.json          # metadata + inline mcpServers.logosdb
-├── .mcp.json                # same MCP block (mirror / tooling); loader uses plugin.json
+├── scripts/
+│   └── logosdb-mcp-wrap.sh  # sets LOGOSDB_PATH from CLAUDE_PROJECT_DIR, runs npx server
+├── .mcp.json                # same MCP block as plugin.json (mirror)
 ├── commands/
 │   └── README.md            # note: slash skills live under skills/
 ├── skills/
@@ -30,7 +32,9 @@ claude-code-semantic-memory/
 /plugin install semantic-memory
 ```
 
-MCP **`logosdb`** is declared inline in **`.claude-plugin/plugin.json`** under **`mcpServers`** (and mirrored in **`.mcp.json`**). **`LOGOSDB_PATH`** is **`./.logosdb`** so the DB lives under the **opened project** (add `.logosdb/` to `.gitignore` if you do not want it committed). Using **`${CLAUDE_PLUGIN_DATA}`** here was unreliable when that variable was unset, which prevented MCP tools from registering.
+MCP **`logosdb`** runs **`/bin/sh`** + **`scripts/logosdb-mcp-wrap.sh`** (declared in **`.claude-plugin/plugin.json`** and mirrored in **`.mcp.json`**). The wrapper sets **`LOGOSDB_PATH`** to **`$CLAUDE_PROJECT_DIR/.logosdb`** so user-scoped plugins do not write under the plugin cache cwd ([claude-code#42687](https://github.com/anthropics/claude-code/issues/42687)). One diagnostic line goes to **stderr**; use **`claude --debug`** if tools are missing. Add **`.logosdb/`** to **`.gitignore`**.
+
+**Older Claude Code:** upgrade so **`CLAUDE_PROJECT_DIR`** is set for stdio MCP, or install this plugin with **`--scope project`**.
 
 ## Slash commands (skills format)
 

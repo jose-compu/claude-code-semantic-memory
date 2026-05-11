@@ -1,8 +1,8 @@
 ---
 name: semantic-memory
-description: "LogosDB semantic memory via bundled MCP (mcpServers in plugin.json, mirrored .mcp.json). logosdb-mcp-server, LOGOSDB_PATH ./.logosdb per project. User-invoked skills /index /search /forget (skills/index|search|forget/SKILL.md). Optional project .claude/commands/ for custom prompts. Triggers: semantic memory, LogosDB, logosdb MCP, persistent memory, semantic-memory plugin."
+description: "LogosDB semantic memory via bundled MCP: scripts/logosdb-mcp-wrap.sh sets LOGOSDB_PATH from CLAUDE_PROJECT_DIR (fixes user-scope plugin cwd in cache). logosdb-mcp-server. User-invoked /index /search /forget. Triggers: semantic memory, LogosDB, logosdb MCP, semantic-memory plugin."
 metadata:
-  version: "0.2.3"
+  version: "0.2.4"
   last_updated: "2026-05-11"
   status: active
   data_access_level: raw
@@ -27,11 +27,16 @@ This plugin ships the **logosdb** MCP server and guidance for **semantic, sessio
 
 ## 1. Where vector data lives (plugin default)
 
-**`mcpServers.logosdb.env.LOGOSDB_PATH`** is **`./.logosdb`** (resolved relative to the **workspace / project cwd** when Claude spawns MCP — same idea as upstream LogosDB docs).
+The MCP entrypoint is **`scripts/logosdb-mcp-wrap.sh`**, which:
+
+1. **`cd`s into `CLAUDE_PROJECT_DIR`** when set (so **`process.cwd()`** matches your repo — required for **`logosdb_index_file`** path rules; see [claude-code#42687](https://github.com/anthropics/claude-code/issues/42687)).
+2. Sets **`LOGOSDB_PATH`** to **`$CLAUDE_PROJECT_DIR/.logosdb`** (or **`$PWD/.logosdb`** if unset).
+
+**Why a wrapper?** User-scoped plugins often started with cwd = **plugin cache**; both the vector root and indexable paths were wrong until **`CLAUDE_PROJECT_DIR`** + **`cd`**.
 
 Add **`.logosdb/`** to your project **`.gitignore`** if you do not want vector files committed.
 
-**Why not `${CLAUDE_PLUGIN_DATA}`?** On some installs that variable is unset; a literal or broken path prevented the server from starting, so **`logosdb_*` tools never appeared**. Per-project **`./.logosdb`** is predictable and writable.
+On startup the wrapper prints one diagnostic line to **stderr** (safe for MCP): `[semantic-memory plugin] LOGOSDB_PATH=...`. Use **`claude --debug`** (or your client’s MCP logs) if tools still do not appear.
 
 ---
 
@@ -41,8 +46,9 @@ You do **not** need a project **`.claude/mcp.json`** for the bundled server.
 
 | File | Role |
 |------|------|
-| [`.claude-plugin/plugin.json`](../../.claude-plugin/plugin.json) | Plugin metadata + **inline `mcpServers.logosdb`** (`npx`, `logosdb-mcp-server`, `LOGOSDB_PATH`) |
-| [`.mcp.json`](../../.mcp.json) (repo root) | Same `mcpServers` block (mirror for docs / tools that read this file only) |
+| [`.claude-plugin/plugin.json`](../../.claude-plugin/plugin.json) | Plugin metadata + **`mcpServers.logosdb`**: `/bin/sh` + [`scripts/logosdb-mcp-wrap.sh`](../../scripts/logosdb-mcp-wrap.sh) → `npx -y logosdb-mcp-server` |
+| [`.mcp.json`](../../.mcp.json) (repo root) | Same `mcpServers` block (mirror) |
+| [`scripts/logosdb-mcp-wrap.sh`](../../scripts/logosdb-mcp-wrap.sh) | Sets **`LOGOSDB_PATH`**, logs to stderr, **`exec`** server (stdout reserved for MCP) |
 
 **Avoid duplicates:** if the same workspace still defines **`logosdb`** in **`.claude/mcp.json`**, remove one registration or you may spawn two servers.
 
@@ -112,7 +118,7 @@ The MCP server does not index the repository by itself: **call the tools**, or u
 ```markdown
 ## LogosDB (semantic memory via MCP)
 
-The **logosdb** MCP server is configured (this workspace uses the **semantic-memory** plugin). Vector data lives under **`LOGOSDB_PATH`** (default **`./.logosdb`** in the project — add to **`.gitignore`** if needed).
+The **logosdb** MCP server is configured (this workspace uses the **semantic-memory** plugin). Vector data lives under **`LOGOSDB_PATH`** (default **`$CLAUDE_PROJECT_DIR/.logosdb`** when the wrapper runs under Claude Code — add **`.logosdb/`** to **`.gitignore`** if needed).
 
 **Namespaces:** Use separate namespaces (e.g. `code` for `src/`, `docs` for `docs/`, `decisions` for short notes). Search the namespace that matches the task.
 
@@ -148,7 +154,8 @@ Use **one embedding backend and dimension** per namespace on disk; when changing
 
 | Symptom | Action |
 |--------|--------|
-| MCP fails to start / module not found | Run `npx -y logosdb-mcp-server` with a temp `LOGOSDB_PATH`; fix Node / network. |
+| MCP fails to start / no **`logosdb_*`** tools | Update Claude Code (needs **`CLAUDE_PROJECT_DIR`** for plugin MCP, [claude-code#42687](https://github.com/anthropics/claude-code/issues/42687)); or install plugin **`--scope project`**. Check stderr for `[semantic-memory plugin]` line; run `claude --debug`. |
+| `npx` / native addon errors | From a terminal: `LOGOSDB_PATH=/tmp/t npx -y logosdb-mcp-server` — fix Node, network, or `logosdb` wheel install. |
 | Two **logosdb** servers / flaky tools | Remove duplicate **`logosdb`** from project **`.claude/mcp.json`** if the plugin already supplies it. |
 | **`/index`**, **`/search`**, **`/forget`** missing | Confirm plugin enabled; reload; definitions live under **`skills/index`**, **`skills/search`**, **`skills/forget`**. |
 | Project-only prompts wanted | Copy **`skills/semantic-memory/.claude/commands/*.md`** to **`.claude/commands/`** (§6b). |

@@ -1,6 +1,6 @@
 ---
 name: semantic-memory
-description: "LogosDB semantic memory plugin: MCP wrap.sh, incremental /index (mcp 0.7.11+). Instructions require /index . on every Claude session load when plugin is active. Triggers: semantic memory, LogosDB, logosdb MCP, semantic-memory plugin."
+description: "LogosDB semantic memory plugin: MCP wrap.sh, incremental /index (mcp ≥0.7.11; ≥0.7.12 if client shows 0 tools). Instructions require /index . on every Claude session load when plugin is active. Triggers: semantic memory, LogosDB, logosdb MCP, semantic-memory plugin."
 metadata:
   version: "0.2.8"
   last_updated: "2026-05-11"
@@ -93,7 +93,7 @@ On macOS, **`timeout`** may be missing; use **`sleep` + `kill`** as above. **`np
 | Piece | Role |
 |-------|------|
 | **[`logosdb`](https://www.npmjs.com/package/logosdb)** (Node native addon) | Vector store: **`put`**, **`search`**, **`delete`**, etc. Pulled in as a **dependency** of **`logosdb-mcp-server`**. Version is whatever the published MCP package declares (e.g. **`^0.7.10`**). |
-| **[`logosdb-mcp-server`](https://www.npmjs.com/package/logosdb-mcp-server)** | MCP process: **`logosdb_index_file`**, **`logosdb_search`**, … **Incremental file indexing** (`incremental: true`, default for **`/index`**) is implemented **here** (manifest under **`LOGOSDB_PATH/_logosdb_mcp_manifests/`**), not inside the native addon. Use **≥ 0.7.11** for that feature (`npm view logosdb-mcp-server version`). |
+| **[`logosdb-mcp-server`](https://www.npmjs.com/package/logosdb-mcp-server)** | MCP process: **`logosdb_index_file`**, **`logosdb_search`**, **`logosdb_list`**, … **Incremental file indexing** (`incremental: true`, default for **`/index`**) is implemented **here** (manifest under **`LOGOSDB_PATH/_logosdb_mcp_manifests/`**), not inside the native addon. Use **≥ 0.7.11** for incremental (`npm view logosdb-mcp-server version`). **≥ 0.7.12** loads the native addon lazily so a missing **`logosdb`** prebuild no longer prevents **`tools/list`** from returning tools (first index/search still requires a working native install). |
 
 **Why it feels fast:** with **`incremental: true`**, only **new or changed** files under the path are embedded again; unchanged files are skipped and changed files have their old chunk rows removed first ([upstream CHANGELOG 0.7.11](https://github.com/jose-compu/logosdb/blob/main/CHANGELOG)). Cost is still **O(changed files)** for disk + **O(changed chunks)** for the embedding model — not zero, but far less than a full tree re-index.
 
@@ -116,8 +116,17 @@ Optional automation outside skills: [Claude Code hooks](https://docs.anthropic.c
 ## 5. Verify MCP after enabling the plugin
 
 1. Install or enable **`semantic-memory`** (`/plugin install semantic-memory` or `claude --plugin-dir .` from this repo).
-2. Run **`logosdb_list`** from the agent (or ** `/mcp`**). Empty namespaces are fine; a spawn error is not.
+2. Run **`logosdb_list`** from the agent (or **`/mcp`**). Empty namespaces are fine; a spawn error is not.
 3. Confirm **`/index .`** works once (incremental); add the §7 **`CLAUDE.md`** block to the project so **every session** starts with that pass.
+
+**If the UI says the MCP server connected but registered 0 tools (older `logosdb-mcp-server`):** the subprocess often **exited during import** because the **`logosdb`** native addon failed to install (missing N-API prebuild for your OS/arch, or **`npm install`** inside **`npx`** did not produce **`logosdb.node`**). Use the **same `node`** Claude uses and run:
+
+```bash
+# Resolves `logosdb` the same way as `npx logosdb-mcp-server` (sibling in the temp install tree)
+npx --yes -p logosdb-mcp-server node -e "require('logosdb'); console.log('logosdb native OK')"
+```
+
+If that throws, fix the native install (Node **20 LTS** vs bleeding-edge **22**, reinstall, or build from source per [LogosDB `nodejs/README.md`](https://github.com/jose-compu/logosdb/blob/main/nodejs/README.md)), then **`/reload-plugins`**. After **`logosdb-mcp-server` ≥ 0.7.12** is published and picked up by **`npx`**, tools should list even when native is broken; tool calls will then return a clear error until native loads.
 
 ---
 
@@ -127,9 +136,11 @@ Per [example-plugin README — Skills](https://github.com/anthropics/claude-plug
 
 | Skill directory | Slash command |
 |-----------------|----------------|
-| [`skills/index/SKILL.md`](../index/SKILL.md) | **`/index`** |
+| [`skills/index/SKILL.md`](../index/SKILL.md) | **`/index`** (top-level skill name **`index`**) |
 | [`skills/search/SKILL.md`](../search/SKILL.md) | **`/search`** |
 | [`skills/forget/SKILL.md`](../forget/SKILL.md) | **`/forget`** |
+
+Some Claude Code builds also expose the copies under **[`skills/semantic-memory/.claude/commands/`](../semantic-memory/.claude/commands/index.md)** as **`/semantic-memory:index`** (and similarly **`…:search`** / **`…:forget`**). Those prompts call the **same** MCP tools (**`logosdb_index_file`**, **`logosdb_search`**, **`logosdb_delete`**); naming is client UI only, not the MCP contract.
 
 Legacy repo-root **`commands/*.md`** is **not** used here (see [`commands/README.md`](../../commands/README.md) in this repo).
 

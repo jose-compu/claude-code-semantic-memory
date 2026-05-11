@@ -2,7 +2,7 @@
 name: semantic-memory
 description: "Install LogosDB semantic memory via logosdb-mcp-server (MCP). Default: fully local Transformers.js embeddings (no API keys). Requires .claude/mcp.json, project .claude/commands/ (/index, /search, /forget) copied from this skill bundle, .gitignore for LOGOSDB_PATH, verification, and the CLAUDE.md habit block from upstream LogosDB README. Triggers on: semantic memory, LogosDB, logosdb MCP, persistent memory, semantic-memory skill."
 metadata:
-  version: "0.1.2"
+  version: "0.1.3"
   last_updated: "2026-05-11"
   status: active
   data_access_level: raw
@@ -115,7 +115,7 @@ Claude Code discovers project slash commands from **`.claude/commands/*.md`**. F
 Example (adjust `SKILL_ROOT` to where you cloned or unpacked this plugin; plugin installs resolve to the plugin checkout on disk):
 
 ```bash
-SKILL_ROOT="/path/to/claude-code-skills/semantic-memory"
+SKILL_ROOT="/path/to/claude-code-semantic-memory/semantic-memory"
 install -d .claude/commands
 cp "$SKILL_ROOT/.claude/commands/"*.md .claude/commands/
 ```

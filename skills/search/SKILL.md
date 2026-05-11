@@ -1,11 +1,11 @@
 ---
-name: memory-search
+name: search
 description: LogosDB — semantic search over indexed memory (optional time window).
 argument-hint: "<query>" [--namespace=name] [--top-k=n] [--from-ts=ISO] [--to-ts=ISO]
 model: sonnet
 ---
 
-# /memory-search
+# /search
 
 User invoked with: **$ARGUMENTS**
 

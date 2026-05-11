@@ -1,7 +1,7 @@
 {
   "name": "semantic-memory",
-  "version": "0.2.2",
-  "description": "Semantic memory plugin: LogosDB MCP (mcpServers in this manifest), local embeddings, user-invoked skills /memory-* (skills/*/SKILL.md), model guidance in skills/semantic-memory.",
+  "version": "0.2.3",
+  "description": "Semantic memory plugin: LogosDB MCP (mcpServers in this manifest), local embeddings, user-invoked /index /search /forget (skills/index|search|forget), model guidance in skills/semantic-memory.",
   "author": {
     "name": "Jose Ignacio",
     "url": "https://github.com/jose-compu"

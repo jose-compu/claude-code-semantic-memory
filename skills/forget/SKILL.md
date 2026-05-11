@@ -1,11 +1,11 @@
 ---
-name: memory-forget
+name: forget
 description: LogosDB — delete a memory row by id or by semantic query match.
 argument-hint: [--namespace=name] (--id=n | --query="...")
 model: sonnet
 ---
 
-# /memory-forget
+# /forget
 
 User invoked with: **$ARGUMENTS**
 

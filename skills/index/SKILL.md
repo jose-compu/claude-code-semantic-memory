@@ -1,11 +1,11 @@
 ---
-name: memory-index
+name: index
 description: LogosDB — index a file or directory into semantic memory for later search.
 argument-hint: <path> [--namespace=name] [-n name]
 model: sonnet
 ---
 
-# /memory-index
+# /index
 
 User invoked with: **$ARGUMENTS**
 

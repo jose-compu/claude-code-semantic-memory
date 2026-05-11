@@ -1,8 +1,8 @@
 ---
 name: semantic-memory
-description: "LogosDB semantic memory via bundled MCP (mcpServers in plugin.json, mirrored .mcp.json). logosdb-mcp-server, LOGOSDB_PATH ./.logosdb per project. User-invoked skills /memory-index /memory-search /memory-forget under skills/<name>/SKILL.md. Optional project .claude/commands/ for /index aliases. Triggers: semantic memory, LogosDB, logosdb MCP, persistent memory, semantic-memory plugin."
+description: "LogosDB semantic memory via bundled MCP (mcpServers in plugin.json, mirrored .mcp.json). logosdb-mcp-server, LOGOSDB_PATH ./.logosdb per project. User-invoked skills /index /search /forget (skills/index|search|forget/SKILL.md). Optional project .claude/commands/ for custom prompts. Triggers: semantic memory, LogosDB, logosdb MCP, persistent memory, semantic-memory plugin."
 metadata:
-  version: "0.2.2"
+  version: "0.2.3"
   last_updated: "2026-05-11"
   status: active
   data_access_level: raw
@@ -85,17 +85,17 @@ Per [example-plugin README — Skills](https://github.com/anthropics/claude-plug
 
 | Skill directory | Slash command |
 |-----------------|----------------|
-| [`skills/memory-index/SKILL.md`](../memory-index/SKILL.md) | **`/memory-index`** |
-| [`skills/memory-search/SKILL.md`](../memory-search/SKILL.md) | **`/memory-search`** |
-| [`skills/memory-forget/SKILL.md`](../memory-forget/SKILL.md) | **`/memory-forget`** |
+| [`skills/index/SKILL.md`](../index/SKILL.md) | **`/index`** |
+| [`skills/search/SKILL.md`](../search/SKILL.md) | **`/search`** |
+| [`skills/forget/SKILL.md`](../forget/SKILL.md) | **`/forget`** |
 
 Legacy repo-root **`commands/*.md`** is **not** used here (see [`commands/README.md`](../../commands/README.md) in this repo).
 
-**Verify:** **`/memory-search`** with a trivial query (empty namespace → “No matches…” is fine).
+**Verify:** **`/search`** with a trivial query (empty namespace → “No matches…” is fine).
 
-### 6b. Project aliases (optional) — `/index`, `/search`, `/forget`
+### 6b. Project-only prompts (optional)
 
-Copy **`skills/semantic-memory/.claude/commands/{index,search,forget}.md`** into your project **`.claude/commands/`**:
+If the plugin is **not** loaded but you still want **`/index`**, **`/search`**, **`/forget`** from markdown prompts, copy **`skills/semantic-memory/.claude/commands/{index,search,forget}.md`** into your project **`.claude/commands/`** (same filenames as upstream [LogosDB](https://github.com/jose-compu/logosdb/tree/main/.claude/commands)). When the plugin **is** active, prefer the plugin skills above to avoid duplicate slash definitions.
 
 ```bash
 PLUGIN_ROOT="/path/to/claude-code-semantic-memory"
@@ -107,7 +107,7 @@ cp "$PLUGIN_ROOT/skills/semantic-memory/.claude/commands/"*.md .claude/commands/
 
 ## 7. `CLAUDE.md` — agent instructions (adapted)
 
-The MCP server does not index the repository by itself: **call the tools**, or use **`/memory-index`**, **`/memory-search`**, **`/memory-forget`** (plugin), or **`/index`**, **`/search`**, **`/forget`** if you installed §6b. Add the following to the project’s **`CLAUDE.md`** (or equivalent). Adjust namespaces and paths.
+The MCP server does not index the repository by itself: **call the tools**, or use plugin slash skills **`/index`**, **`/search`**, **`/forget`**. Add the following to the project’s **`CLAUDE.md`** (or equivalent). Adjust namespaces and paths.
 
 ```markdown
 ## LogosDB (semantic memory via MCP)
@@ -117,14 +117,14 @@ The **logosdb** MCP server is configured (this workspace uses the **semantic-mem
 **Namespaces:** Use separate namespaces (e.g. `code` for `src/`, `docs` for `docs/`, `decisions` for short notes). Search the namespace that matches the task.
 
 **When starting substantive work on this codebase:**
-1. If you need broad code context, call **`logosdb_index_file`** on the smallest useful path (e.g. `src/`), or run **`/memory-index`** with the same path — not the whole monorepo unless asked.
-2. Before “where is X implemented?”, call **`logosdb_search`** or **`/memory-search`** with a tight query, appropriate `namespace`, `top_k` **3–8**. Retrieve, then open only cited files.
+1. If you need broad code context, call **`logosdb_index_file`** on the smallest useful path (e.g. `src/`), or run **`/index`** with the same path — not the whole monorepo unless asked.
+2. Before “where is X implemented?”, call **`logosdb_search`** or **`/search`** with a tight query, appropriate `namespace`, `top_k` **3–8**. Retrieve, then open only cited files.
 3. For recent decisions, **`logosdb_search`** with optional **`ts_from` / `ts_to`** on `decisions` or `docs` when timestamps matter.
-4. For durable facts, **`logosdb_index`** (or document via **`/memory-index`** flows) into the right namespace.
+4. For durable facts, **`logosdb_index`** (or document via **`/index`** flows) into the right namespace.
 
 **After large refactors:** re-index affected paths.
 
-**Deletion:** **`logosdb_delete`** or **`/memory-forget`** by `id` or semantic `query`.
+**Deletion:** **`logosdb_delete`** or **`/forget`** by `id` or semantic `query`.
 ```
 
 ---
@@ -150,8 +150,8 @@ Use **one embedding backend and dimension** per namespace on disk; when changing
 |--------|--------|
 | MCP fails to start / module not found | Run `npx -y logosdb-mcp-server` with a temp `LOGOSDB_PATH`; fix Node / network. |
 | Two **logosdb** servers / flaky tools | Remove duplicate **`logosdb`** from project **`.claude/mcp.json`** if the plugin already supplies it. |
-| `/memory-*` missing | Confirm plugin enabled; reload; definitions live under **`skills/memory-*/SKILL.md`**. |
-| `/index` etc. missing | Copy **`skills/semantic-memory/.claude/commands/*.md`** to project **`.claude/commands/`**. |
+| **`/index`**, **`/search`**, **`/forget`** missing | Confirm plugin enabled; reload; definitions live under **`skills/index`**, **`skills/search`**, **`skills/forget`**. |
+| Project-only prompts wanted | Copy **`skills/semantic-memory/.claude/commands/*.md`** to **`.claude/commands/`** (§6b). |
 | `logosdb_index_file` rejects a path | Stay inside cwd or set **`LOGOSDB_INDEX_ROOT`**. |
 | Search wrong after model change | New embeddings need a fresh **`LOGOSDB_PATH`** or namespace. |
 
@@ -165,9 +165,9 @@ Use this skill for **LogosDB**, **logosdb MCP**, **semantic / persistent memory*
 
 Prefer slash commands when available:
 
-- **`/memory-index`** — index paths, refresh memory after changes, new namespace.
-- **`/memory-search`** — semantic lookup, “where is X”, prior decisions.
-- **`/memory-forget`** — delete by id or semantic query.
+- **`/index`** — index paths, refresh memory after changes, new namespace.
+- **`/search`** — semantic lookup, “where is X”, prior decisions.
+- **`/forget`** — delete by id or semantic query.
 
 Fallback MCP tools: `logosdb_index_file`, `logosdb_search`, `logosdb_delete`.
 

@@ -17,9 +17,9 @@ claude-code-semantic-memory/
 │   ├── semantic-memory/     # model-invoked guidance + CLAUDE.md template
 │   │   ├── SKILL.md
 │   │   └── .claude/commands/   # optional copy → project /index /search /forget
-│   ├── memory-index/        # user-invoked → /memory-index
-│   ├── memory-search/       # user-invoked → /memory-search
-│   └── memory-forget/       # user-invoked → /memory-forget
+│   ├── index/               # user-invoked → /index
+│   ├── search/              # user-invoked → /search
+│   └── forget/              # user-invoked → /forget
 └── README.md
 ```
 
@@ -36,11 +36,11 @@ MCP **`logosdb`** is declared inline in **`.claude-plugin/plugin.json`** under *
 
 | Command | Skill |
 |---------|--------|
-| `/memory-index` | [`skills/memory-index/SKILL.md`](skills/memory-index/SKILL.md) |
-| `/memory-search` | [`skills/memory-search/SKILL.md`](skills/memory-search/SKILL.md) |
-| `/memory-forget` | [`skills/memory-forget/SKILL.md`](skills/memory-forget/SKILL.md) |
+| `/index` | [`skills/index/SKILL.md`](skills/index/SKILL.md) |
+| `/search` | [`skills/search/SKILL.md`](skills/search/SKILL.md) |
+| `/forget` | [`skills/forget/SKILL.md`](skills/forget/SKILL.md) |
 
-Optional short names **`/index`**, **`/search`**, **`/forget`**: copy [`skills/semantic-memory/.claude/commands/`](skills/semantic-memory/.claude/commands/) into your project **`.claude/commands/`**.
+Optional project-only prompts (without the plugin): copy [`skills/semantic-memory/.claude/commands/`](skills/semantic-memory/.claude/commands/) into **`.claude/commands/`** (same idea as upstream LogosDB).
 
 ## Model-invoked guidance
 

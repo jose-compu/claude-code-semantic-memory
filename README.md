@@ -25,18 +25,42 @@ claude-code-semantic-memory/
 └── README.md
 ```
 
-## Install
+## Install (plugin)
 
 ```text
 /plugin marketplace add jose-compu/claude-code-semantic-memory
 /plugin install semantic-memory
 ```
 
-MCP **`logosdb`** runs **`/bin/sh`** + **`scripts/logosdb-mcp-wrap.sh`** (declared in **`.claude-plugin/plugin.json`** and mirrored in **`.mcp.json`**). The wrapper sets **`LOGOSDB_PATH`** to **`$CLAUDE_PROJECT_DIR/.logosdb`** so user-scoped plugins do not write under the plugin cache cwd ([claude-code#42687](https://github.com/anthropics/claude-code/issues/42687)). One diagnostic line goes to **stderr**; use **`claude --debug`** if tools are missing. Add **`.logosdb/`** to **`.gitignore`**.
+MCP **`logosdb`** runs **`/bin/sh`** + **`scripts/logosdb-mcp-wrap.sh`** (see **`.claude-plugin/plugin.json`**, mirrored in **`.mcp.json`**). Wrapper sets **`LOGOSDB_PATH`**, **`LOGOSDB_INDEX_ROOT`**, and **`cd`** from **`CLAUDE_PROJECT_DIR`** when present ([claude-code#42687](https://github.com/anthropics/claude-code/issues/42687)). **`claude --debug`** if tools are missing.
 
-**Older Claude Code:** upgrade so **`CLAUDE_PROJECT_DIR`** is set for stdio MCP ([issue #42687](https://github.com/anthropics/claude-code/issues/42687)), or install with **`--scope project`**. MCP wiring matches [Claude Code MCP docs](https://docs.anthropic.com/en/docs/claude-code/mcp/) (stdio + `npx`); this plugin adds a launcher for cwd / **`LOGOSDB_INDEX_ROOT`**. If plugin MCP still fails, use **one** `logosdb` registration: merge [`skills/semantic-memory/references/project-mcp-fallback.json`](skills/semantic-memory/references/project-mcp-fallback.json) into **`.claude/mcp.json`** and disable this plugin to avoid duplicate servers.
+## Install (user-wide `~/.claude.json`) — recommended for stable `LOGOSDB_PATH`
+
+Store vectors under **`~/.claude/.logosdb`** (one tree for all projects) and register MCP once in your **user** config. Matches the usual Claude Code pattern: [MCP docs](https://docs.anthropic.com/en/docs/claude-code/mcp/) (stdio + `npx`).
+
+1. **Merge** the `mcpServers` block from [`skills/semantic-memory/references/user-claude-json-logosdb.json`](skills/semantic-memory/references/user-claude-json-logosdb.json) into **`~/.claude.json`** (same key shape as other servers). It uses **`"LOGOSDB_PATH": "${HOME}/.claude/.logosdb"`** so the path is absolute after expansion. If your client does not expand **`${HOME}`**, replace it with an absolute path (e.g. **`/Users/you/.claude/.logosdb`**).
+
+2. **Only one `logosdb` server:** if you use **`~/.claude.json`**, disable or uninstall this plugin’s MCP (or the whole plugin) so you do not register **`logosdb`** twice.
+
+3. **CLI (optional):** some builds support adding stdio MCP from the shell, e.g. `claude mcp add` — run **`claude mcp --help`** for the exact subcommands on your version.
+
+4. **If `npx` fails or exits oddly:** clear the ephemeral install cache, then retry ([common with `npx` + native deps](https://www.npmjs.com/package/logosdb-mcp-server)):
+
+   ```bash
+   rm -rf ~/.npm/_npx
+   npm cache clean --force
+   LOGOSDB_PATH="$HOME/.claude/.logosdb" npx -y logosdb-mcp-server
+   ```
+
+   (Stop with Ctrl+C once it is running.) Then restart Claude Code.
+
+5. **Logs:** **`~/.claude/logs/mcp-server-*.log`** (names vary by build) for MCP spawn errors.
+
+**Project-only DB** (per-repo `./.logosdb`): use [`skills/semantic-memory/references/project-mcp-fallback.json`](skills/semantic-memory/references/project-mcp-fallback.json) in **`.claude/mcp.json`** at the repo root instead — still only **one** active `logosdb` registration.
 
 ## Slash commands (skills format)
+
+**`/index`** uses **`logosdb_index_file`** with **`incremental: true`** (new/changed files only; needs **`logosdb-mcp-server` ≥ 0.7.11**). With the plugin active, project **`CLAUDE.md`** should require the agent to run **`/index .`** on **every Claude session load** before other work (see [`skills/semantic-memory/SKILL.md`](skills/semantic-memory/SKILL.md) — Prerequisites plugin contract, §4c, §7 template). Hooks can enforce this if you need a guarantee beyond model instructions.
 
 | Command | Skill |
 |---------|--------|

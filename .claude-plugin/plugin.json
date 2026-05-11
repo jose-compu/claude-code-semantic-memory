@@ -1,6 +1,6 @@
 {
   "name": "semantic-memory",
-  "version": "0.2.5",
+  "version": "0.2.8",
   "description": "Semantic memory plugin: LogosDB MCP (wrap.sh: cd + LOGOSDB_INDEX_ROOT + npm exec/npx), /index /search /forget, skills/semantic-memory + project MCP fallback JSON.",
   "author": {
     "name": "Jose Ignacio",

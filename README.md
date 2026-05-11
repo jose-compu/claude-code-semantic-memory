@@ -1,4 +1,4 @@
-# Claude Code skills
+# claude-code-semantic-memory
 
 Custom [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview) skills (plugin layout aligned with [academic-research-skills](https://github.com/Imbad0202/academic-research-skills): `.claude-plugin/` manifest + one directory per skill with `SKILL.md`).
 

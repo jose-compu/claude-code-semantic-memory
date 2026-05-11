@@ -9,8 +9,8 @@ Structure follows Anthropic’s **[example-plugin](https://github.com/anthropics
 ```
 claude-code-semantic-memory/
 ├── .claude-plugin/
-│   └── plugin.json          # metadata + "mcpServers": "./.mcp.json"
-├── .mcp.json                # logosdb MCP server
+│   └── plugin.json          # metadata + inline mcpServers.logosdb
+├── .mcp.json                # same MCP block (mirror / tooling); loader uses plugin.json
 ├── commands/
 │   └── README.md            # note: slash skills live under skills/
 ├── skills/
@@ -30,7 +30,7 @@ claude-code-semantic-memory/
 /plugin install semantic-memory
 ```
 
-MCP is wired from **`.mcp.json`** via **`plugin.json`** (`mcpServers`). Default **`LOGOSDB_PATH`**: **`${CLAUDE_PLUGIN_DATA}/.logosdb`**.
+MCP **`logosdb`** is declared inline in **`.claude-plugin/plugin.json`** under **`mcpServers`** (and mirrored in **`.mcp.json`**). **`LOGOSDB_PATH`** is **`./.logosdb`** so the DB lives under the **opened project** (add `.logosdb/` to `.gitignore` if you do not want it committed). Using **`${CLAUDE_PLUGIN_DATA}`** here was unreliable when that variable was unset, which prevented MCP tools from registering.
 
 ## Slash commands (skills format)
 

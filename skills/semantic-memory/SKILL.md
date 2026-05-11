@@ -1,8 +1,8 @@
 ---
 name: semantic-memory
-description: "LogosDB semantic memory via bundled MCP (root .mcp.json + plugin.json mcpServers). logosdb-mcp-server, local Transformers.js by default. User-invoked slash skills /memory-index /memory-search /memory-forget live under skills/<name>/SKILL.md (Anthropic example-plugin pattern). Optional project .claude/commands/ for /index aliases. Triggers: semantic memory, LogosDB, logosdb MCP, persistent memory, semantic-memory plugin."
+description: "LogosDB semantic memory via bundled MCP (mcpServers in plugin.json, mirrored .mcp.json). logosdb-mcp-server, LOGOSDB_PATH ./.logosdb per project. User-invoked skills /memory-index /memory-search /memory-forget under skills/<name>/SKILL.md. Optional project .claude/commands/ for /index aliases. Triggers: semantic memory, LogosDB, logosdb MCP, persistent memory, semantic-memory plugin."
 metadata:
-  version: "0.2.1"
+  version: "0.2.2"
   last_updated: "2026-05-11"
   status: active
   data_access_level: raw
@@ -11,7 +11,7 @@ metadata:
 
 # Semantic memory — LogosDB MCP (plugin)
 
-This plugin ships the **logosdb** MCP server and guidance for **semantic, session-persistent memory** using [`logosdb-mcp-server`](https://www.npmjs.com/package/logosdb-mcp-server). Layout matches Anthropic’s [example-plugin](https://github.com/anthropics/claude-plugins-official/tree/main/plugins/example-plugin): root **`.mcp.json`**, **`plugin.json`** with **`mcpServers`**, and **user-invoked slash commands** as **`skills/<name>/SKILL.md`** (not legacy `commands/*.md`). Upstream reference: [LogosDB README](https://github.com/jose-compu/logosdb/blob/main/README.md#claude-code-complete-recipe), [`mcp/README.md`](https://github.com/jose-compu/logosdb/blob/main/mcp/README.md).
+This plugin ships the **logosdb** MCP server and guidance for **semantic, session-persistent memory** using [`logosdb-mcp-server`](https://www.npmjs.com/package/logosdb-mcp-server). **`mcpServers`** live **inline in `.claude-plugin/plugin.json`** (and are mirrored in root **`.mcp.json`**). User-invoked slash skills use **`skills/<name>/SKILL.md`** per [example-plugin](https://github.com/anthropics/claude-plugins-official/tree/main/plugins/example-plugin). Upstream: [LogosDB README](https://github.com/jose-compu/logosdb/blob/main/README.md#claude-code-complete-recipe), [`mcp/README.md`](https://github.com/jose-compu/logosdb/blob/main/mcp/README.md).
 
 **Default behavior:** omit `EMBEDDING_PROVIDER` so the server uses **on-device Transformers.js** (`Xenova/all-MiniLM-L6-v2`, 384 dims). First run may download model weights to the normal Transformers.js cache. No cloud API keys are required for that path.
 
@@ -27,13 +27,11 @@ This plugin ships the **logosdb** MCP server and guidance for **semantic, sessio
 
 ## 1. Where vector data lives (plugin default)
 
-This plugin’s **`.mcp.json`** sets:
+**`mcpServers.logosdb.env.LOGOSDB_PATH`** is **`./.logosdb`** (resolved relative to the **workspace / project cwd** when Claude spawns MCP — same idea as upstream LogosDB docs).
 
-- **`LOGOSDB_PATH`** = **`${CLAUDE_PLUGIN_DATA}/.logosdb`**
+Add **`.logosdb/`** to your project **`.gitignore`** if you do not want vector files committed.
 
-That directory is **writable plugin data** (not inside your git checkout). You do **not** need a repo `.gitignore` entry for it unless you point `LOGOSDB_PATH` at a path inside the project.
-
-To store vectors **inside the repo** (e.g. `./.logosdb`), override MCP env in your client or fork the plugin’s `.mcp.json` / `plugin.json` merge strategy — then add `.logosdb/` to **`.gitignore`**.
+**Why not `${CLAUDE_PLUGIN_DATA}`?** On some installs that variable is unset; a literal or broken path prevented the server from starting, so **`logosdb_*` tools never appeared**. Per-project **`./.logosdb`** is predictable and writable.
 
 ---
 
@@ -43,8 +41,8 @@ You do **not** need a project **`.claude/mcp.json`** for the bundled server.
 
 | File | Role |
 |------|------|
-| [`.mcp.json`](../../.mcp.json) (repo root) | Defines `mcpServers.logosdb` (`npx` + `logosdb-mcp-server` + env) |
-| [`.claude-plugin/plugin.json`](../../.claude-plugin/plugin.json) | Plugin metadata + **`"mcpServers": "./.mcp.json"`** so Claude loads servers with the plugin |
+| [`.claude-plugin/plugin.json`](../../.claude-plugin/plugin.json) | Plugin metadata + **inline `mcpServers.logosdb`** (`npx`, `logosdb-mcp-server`, `LOGOSDB_PATH`) |
+| [`.mcp.json`](../../.mcp.json) (repo root) | Same `mcpServers` block (mirror for docs / tools that read this file only) |
 
 **Avoid duplicates:** if the same workspace still defines **`logosdb`** in **`.claude/mcp.json`**, remove one registration or you may spawn two servers.
 
@@ -114,7 +112,7 @@ The MCP server does not index the repository by itself: **call the tools**, or u
 ```markdown
 ## LogosDB (semantic memory via MCP)
 
-The **logosdb** MCP server is configured (this workspace uses the **semantic-memory** plugin). Vector data lives under **`LOGOSDB_PATH`** (plugin default: plugin data dir via `${CLAUDE_PLUGIN_DATA}/.logosdb` — not committed to your repo unless you override).
+The **logosdb** MCP server is configured (this workspace uses the **semantic-memory** plugin). Vector data lives under **`LOGOSDB_PATH`** (default **`./.logosdb`** in the project — add to **`.gitignore`** if needed).
 
 **Namespaces:** Use separate namespaces (e.g. `code` for `src/`, `docs` for `docs/`, `decisions` for short notes). Search the namespace that matches the task.
 

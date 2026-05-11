@@ -4,13 +4,13 @@
     "name": "Jose Ignacio",
     "url": "https://github.com/jose-compu"
   },
-  "description": "Semantic memory plugin — LogosDB MCP, local embeddings, slash commands, CLAUDE.md template.",
+  "description": "Semantic memory plugin — LogosDB MCP (.mcp.json), local embeddings, slash commands, skills/ guidance.",
   "plugins": [
     {
       "name": "semantic-memory",
       "source": "./",
-      "description": "LogosDB MCP (local embeddings), .claude/mcp.json, plugin commands /memory-index /memory-search /memory-forget, CLAUDE.md snippet.",
-      "version": "0.1.4",
+      "description": "LogosDB MCP (.mcp.json), local embeddings, /memory-* as skills/*/SKILL.md, skills/semantic-memory guidance.",
+      "version": "0.2.1",
       "license": "MIT"
     }
   ]

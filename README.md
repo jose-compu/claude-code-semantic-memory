@@ -1,25 +1,59 @@
 # claude-code-semantic-memory
 
-Custom [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview) skill (plugin layout aligned with [academic-research-skills](https://github.com/Imbad0202/academic-research-skills): `.claude-plugin/` manifest + `SKILL.md` under `semantic-memory/`).
+Claude Code **plugin** with bundled **LogosDB** MCP ([`logosdb-mcp-server`](https://www.npmjs.com/package/logosdb-mcp-server)), local embeddings by default, and slash-invoked skills.
 
-## Install (plugin)
+Structure follows Anthropic’s **[example-plugin](https://github.com/anthropics/claude-plugins-official/tree/main/plugins/example-plugin)** ([README](https://github.com/anthropics/claude-plugins-official/blob/main/plugins/example-plugin/README.md)): `.claude-plugin/plugin.json`, root **`.mcp.json`**, and **`skills/*/SKILL.md`** (preferred over legacy `commands/*.md`).
+
+## Layout
+
+```
+claude-code-semantic-memory/
+├── .claude-plugin/
+│   └── plugin.json          # metadata + "mcpServers": "./.mcp.json"
+├── .mcp.json                # logosdb MCP server
+├── commands/
+│   └── README.md            # note: slash skills live under skills/
+├── skills/
+│   ├── semantic-memory/     # model-invoked guidance + CLAUDE.md template
+│   │   ├── SKILL.md
+│   │   └── .claude/commands/   # optional copy → project /index /search /forget
+│   ├── memory-index/        # user-invoked → /memory-index
+│   ├── memory-search/       # user-invoked → /memory-search
+│   └── memory-forget/       # user-invoked → /memory-forget
+└── README.md
+```
+
+## Install
 
 ```text
 /plugin marketplace add jose-compu/claude-code-semantic-memory
 /plugin install semantic-memory
 ```
 
-Slash commands (plugin root [`commands/`](commands/), same layout as [academic-research-skills](https://github.com/Imbad0202/academic-research-skills/tree/main/commands)): **`/memory-index`**, **`/memory-search`**, **`/memory-forget`**. Optional short names **`/index`**, **`/search`**, **`/forget`**: copy [semantic-memory/.claude/commands/](semantic-memory/.claude/commands/) into your project’s `.claude/commands/`.
+MCP is wired from **`.mcp.json`** via **`plugin.json`** (`mcpServers`). Default **`LOGOSDB_PATH`**: **`${CLAUDE_PLUGIN_DATA}/.logosdb`**.
 
-## Skills
+## Slash commands (skills format)
 
-| Skill | Purpose |
-|-------|---------|
-| [semantic-memory](semantic-memory/SKILL.md) | LogosDB MCP (`logosdb-mcp-server`), default **local** embeddings, `.claude/mcp.json`, plugin **`/memory-*`** commands, optional project **`.claude/commands/`** for **`/index`** etc., **CLAUDE.md** habits |
+| Command | Skill |
+|---------|--------|
+| `/memory-index` | [`skills/memory-index/SKILL.md`](skills/memory-index/SKILL.md) |
+| `/memory-search` | [`skills/memory-search/SKILL.md`](skills/memory-search/SKILL.md) |
+| `/memory-forget` | [`skills/memory-forget/SKILL.md`](skills/memory-forget/SKILL.md) |
 
-## Traditional install
+Optional short names **`/index`**, **`/search`**, **`/forget`**: copy [`skills/semantic-memory/.claude/commands/`](skills/semantic-memory/.claude/commands/) into your project **`.claude/commands/`**.
 
-Clone this repository and symlink or copy the skill directory into your Claude Code skills path, or open the repo as a plugin source per your client’s docs.
+## Model-invoked guidance
+
+[`skills/semantic-memory/SKILL.md`](skills/semantic-memory/SKILL.md) — routing, `CLAUDE.md` snippet, troubleshooting.
+
+## Local development
+
+```bash
+cd /path/to/claude-code-semantic-memory
+claude --plugin-dir .
+```
+
+Then **`/mcp`** or **`logosdb_list`** to confirm the server.
 
 ## License
 

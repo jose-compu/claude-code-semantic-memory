@@ -1,0 +1,20 @@
+{
+  "name": "claude-code-skills",
+  "version": "0.1.2",
+  "description": "Custom Claude Code skills: workflows and integrations. Ships semantic-memory (LogosDB MCP, local embeddings by default, mandatory slash commands, CLAUDE.md habits).",
+  "author": {
+    "name": "Jose Ignacio",
+    "url": "https://github.com/jose-compu"
+  },
+  "homepage": "https://github.com/jose-compu/claude-code-skills",
+  "repository": "https://github.com/jose-compu/claude-code-skills",
+  "license": "MIT",
+  "keywords": [
+    "claude-code",
+    "skills",
+    "mcp",
+    "logosdb",
+    "semantic-memory",
+    "vector-search"
+  ]
+}

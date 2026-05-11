@@ -1,0 +1,17 @@
+{
+  "name": "claude-code-skills",
+  "owner": {
+    "name": "Jose Ignacio",
+    "url": "https://github.com/jose-compu"
+  },
+  "description": "Custom Claude Code skills — MCP-backed memory and related workflows.",
+  "plugins": [
+    {
+      "name": "claude-code-skills",
+      "source": "./",
+      "description": "semantic-memory: LogosDB MCP (local embeddings), .claude/mcp.json, mandatory .claude/commands (/index,/search,/forget), CLAUDE.md snippet.",
+      "version": "0.1.2",
+      "license": "MIT"
+    }
+  ]
+}

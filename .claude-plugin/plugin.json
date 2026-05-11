@@ -1,7 +1,7 @@
 {
   "name": "semantic-memory",
-  "version": "0.1.3",
-  "description": "Semantic memory for Claude Code: LogosDB MCP (logosdb-mcp-server), local embeddings by default, mandatory /index /search /forget commands, CLAUDE.md habits.",
+  "version": "0.1.4",
+  "description": "Semantic memory for Claude Code: LogosDB MCP (logosdb-mcp-server), local embeddings by default, plugin slash commands /memory-index /memory-search /memory-forget (commands/), CLAUDE.md habits.",
   "author": {
     "name": "Jose Ignacio",
     "url": "https://github.com/jose-compu"

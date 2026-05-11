@@ -9,8 +9,8 @@
     {
       "name": "semantic-memory",
       "source": "./",
-      "description": "LogosDB MCP (local embeddings), .claude/mcp.json, mandatory .claude/commands (/index,/search,/forget), CLAUDE.md snippet.",
-      "version": "0.1.3",
+      "description": "LogosDB MCP (local embeddings), .claude/mcp.json, plugin commands /memory-index /memory-search /memory-forget, CLAUDE.md snippet.",
+      "version": "0.1.4",
       "license": "MIT"
     }
   ]

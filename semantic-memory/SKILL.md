@@ -1,8 +1,8 @@
 ---
 name: semantic-memory
-description: "Install LogosDB semantic memory via logosdb-mcp-server (MCP). Default: fully local Transformers.js embeddings (no API keys). Requires .claude/mcp.json, project .claude/commands/ (/index, /search, /forget) copied from this skill bundle, .gitignore for LOGOSDB_PATH, verification, and the CLAUDE.md habit block from upstream LogosDB README. Triggers on: semantic memory, LogosDB, logosdb MCP, persistent memory, semantic-memory skill."
+description: "Install LogosDB semantic memory via logosdb-mcp-server (MCP). Default: fully local Transformers.js embeddings (no API keys). Plugin ships slash commands /memory-index, /memory-search, /memory-forget (commands/ at repo root, same pattern as academic-research-skills). Requires .claude/mcp.json, .gitignore for LOGOSDB_PATH, verification, CLAUDE.md block. Optional project .claude/commands/ for /index, /search, /forget aliases. Triggers on: semantic memory, LogosDB, logosdb MCP, persistent memory, semantic-memory skill."
 metadata:
-  version: "0.1.3"
+  version: "0.1.5"
   last_updated: "2026-05-11"
   status: active
   data_access_level: raw
@@ -100,19 +100,27 @@ npx -y logosdb-mcp-server
 
 ---
 
-## 6. Slash commands (**required**)
+## 6. Slash commands
 
-Claude Code discovers project slash commands from **`.claude/commands/*.md`**. For this skill, setup is **not complete** until **`/index`**, **`/search`**, and **`/forget`** exist for the target project.
+### 6a. Plugin commands (**primary** — [academic-research-skills](https://github.com/Imbad0202/academic-research-skills) style)
 
-1. At the **project root** (next to `.claude/mcp.json`), ensure **`.claude/commands/`** exists.
-2. Copy the three bundled prompts from this skill into that folder (same filenames as upstream [LogosDB `.claude/commands/`](https://github.com/jose-compu/logosdb/tree/main/.claude/commands)):
-   - `index.md` → drives **`/index`**
-   - `search.md` → drives **`/search`**
-   - `forget.md` → drives **`/forget`**
+This repository declares slash commands under repo-root **`commands/*.md`**. After **`/plugin install semantic-memory`**, Claude Code loads:
 
-**Bundled copy (this repository):** `semantic-memory/.claude/commands/{index,search,forget}.md`
+| File | Slash command |
+|------|----------------|
+| `commands/memory-index.md` | **`/memory-index`** |
+| `commands/memory-search.md` | **`/memory-search`** |
+| `commands/memory-forget.md` | **`/memory-forget`** |
 
-Example (adjust `SKILL_ROOT` to where you cloned or unpacked this plugin; plugin installs resolve to the plugin checkout on disk):
+Each file uses YAML frontmatter (`description`, `model: sonnet`) plus the same MCP wiring as LogosDB’s project prompts. **No manual copy** is required for these three when using the marketplace plugin.
+
+**Verify:** reload the client; run **`/memory-search`** with a trivial query (empty namespace → “No matches…” is fine). Unknown command means the plugin is not installed or the client did not refresh.
+
+### 6b. Project aliases (**optional**) — short names `/index`, `/search`, `/forget`
+
+Claude Code also supports project-local **`.claude/commands/*.md`**. To match upstream [LogosDB](https://github.com/jose-compu/logosdb/tree/main/.claude/commands) filenames exactly, copy from this repo:
+
+**Bundled copy:** `semantic-memory/.claude/commands/{index,search,forget}.md` → your project **`.claude/commands/`**.
 
 ```bash
 SKILL_ROOT="/path/to/claude-code-semantic-memory/semantic-memory"
@@ -120,15 +128,11 @@ install -d .claude/commands
 cp "$SKILL_ROOT/.claude/commands/"*.md .claude/commands/
 ```
 
-3. **Verify:** restart or reload Claude Code; confirm **`/index`**, **`/search`**, and **`/forget`** are offered. A quick check: `/search` with a trivial query against an empty namespace should return “No matches…” rather than “unknown command”.
-
-Do not skip this step: the **`CLAUDE.md`** block below assumes both **MCP tools** and these **slash commands** are available.
-
 ---
 
 ## 7. `CLAUDE.md` — agent instructions (upstream template)
 
-The MCP server does not index the repository by itself: **the agent must call the tools** or the user may use **`/index`**, **`/search`**, **`/forget`**. Add the following block to your project’s **`CLAUDE.md`** (or any instructions file your agent reads every session). Adjust namespaces and paths to your repo.
+The MCP server does not index the repository by itself: **the agent must call the tools**, or the user may use **`/memory-index`**, **`/memory-search`**, **`/memory-forget`** (plugin), or **`/index`**, **`/search`**, **`/forget`** if you installed §6b. Add the following block to your project’s **`CLAUDE.md`** (or any instructions file your agent reads every session). Adjust namespaces and paths to your repo.
 
 This text matches the **Agent instructions** section of the [LogosDB README](https://github.com/jose-compu/logosdb/blob/main/README.md#agent-instructions-claudemd-and-similar).
 
@@ -172,7 +176,8 @@ Use **one embedding backend and dimension** per namespace on disk; when changing
 | Symptom | Action |
 |--------|--------|
 | MCP fails to start / module not found | From project root run `npx -y logosdb-mcp-server` or `node` + your built `index.js`; fix Node version or paths. |
-| `/index`, `/search`, or `/forget` missing | Copy `semantic-memory/.claude/commands/*.md` into the project’s `.claude/commands/` and reload the client. |
+| `/memory-*` missing | Confirm `/plugin install semantic-memory` and reload; commands live in repo-root `commands/`. |
+| `/index`, `/search`, `/forget` missing (optional aliases) | Copy `semantic-memory/.claude/commands/*.md` into the project’s `.claude/commands/` and reload. |
 | `logosdb_index_file` rejects a path | Stay inside cwd or set `LOGOSDB_INDEX_ROOT`. |
 | Search looks wrong after a model change | New embeddings need a fresh DB path or namespace; dimensions must match. |
 
@@ -181,3 +186,23 @@ Use **one embedding backend and dimension** per namespace on disk; when changing
 ## Trigger conditions
 
 Use this skill when the user wants **LogosDB**, **logosdb MCP**, **semantic / persistent memory**, or **`semantic-memory`** setup (install, config, `CLAUDE.md`).
+
+### Auto command routing (important)
+
+When plugin commands are available, prefer these slash commands first:
+
+- Use **`/memory-index`** when the user asks to index a path, ingest docs/code, refresh memory after changes, or build/update a namespace.
+- Use **`/memory-search`** when the user asks where something is implemented, asks for similar content, prior decisions, or semantic lookup.
+- Use **`/memory-forget`** when the user asks to delete memory, remove wrong/outdated entries, or forget a specific record/query match.
+
+If commands are unavailable (or fail), call the equivalent MCP tools directly:
+
+- `/memory-index` -> `logosdb_index_file`
+- `/memory-search` -> `logosdb_search`
+- `/memory-forget` -> `logosdb_delete`
+
+Default namespace policy:
+
+- Use `code` for source files and implementation lookup.
+- Use `docs` for design notes and documentation.
+- Use `decisions` for durable architecture/product decisions.

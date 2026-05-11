@@ -9,11 +9,13 @@ Custom [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview) sk
 /plugin install semantic-memory
 ```
 
+Slash commands (plugin root [`commands/`](commands/), same layout as [academic-research-skills](https://github.com/Imbad0202/academic-research-skills/tree/main/commands)): **`/memory-index`**, **`/memory-search`**, **`/memory-forget`**. Optional short names **`/index`**, **`/search`**, **`/forget`**: copy [semantic-memory/.claude/commands/](semantic-memory/.claude/commands/) into your project’s `.claude/commands/`.
+
 ## Skills
 
 | Skill | Purpose |
 |-------|---------|
-| [semantic-memory](semantic-memory/SKILL.md) | LogosDB MCP (`logosdb-mcp-server`), default **local** embeddings, `.claude/mcp.json`, **required** `.claude/commands/` (`/index`, `/search`, `/forget` — [semantic-memory/.claude/commands/](semantic-memory/.claude/commands/)), **CLAUDE.md** habits |
+| [semantic-memory](semantic-memory/SKILL.md) | LogosDB MCP (`logosdb-mcp-server`), default **local** embeddings, `.claude/mcp.json`, plugin **`/memory-*`** commands, optional project **`.claude/commands/`** for **`/index`** etc., **CLAUDE.md** habits |
 
 ## Traditional install
 

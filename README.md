@@ -4,6 +4,15 @@ Claude Code **plugin** with bundled **LogosDB** MCP ([`logosdb-mcp-server`](http
 
 Structure follows Anthropic’s **[example-plugin](https://github.com/anthropics/claude-plugins-official/tree/main/plugins/example-plugin)** ([README](https://github.com/anthropics/claude-plugins-official/blob/main/plugins/example-plugin/README.md)): `.claude-plugin/plugin.json`, root **`.mcp.json`**, and **`skills/*/SKILL.md`** (preferred over legacy `commands/*.md`).
 
+## Install (plugin)
+
+```text
+/plugin marketplace add jose-compu/claude-code-semantic-memory
+/plugin install semantic-memory
+```
+
+MCP **`logosdb`** runs **`/bin/sh`** + **`scripts/logosdb-mcp-wrap.sh`** (see **`.claude-plugin/plugin.json`**, mirrored in **`.mcp.json`**). Wrapper sets **`LOGOSDB_PATH`**, **`LOGOSDB_INDEX_ROOT`**, and **`cd`** from **`CLAUDE_PROJECT_DIR`** when present ([claude-code#42687](https://github.com/anthropics/claude-code/issues/42687)). **`claude --debug`** if tools are missing.
+
 ## Layout
 
 ```
@@ -24,15 +33,6 @@ claude-code-semantic-memory/
 │   └── forget/              # user-invoked → /forget
 └── README.md
 ```
-
-## Install (plugin)
-
-```text
-/plugin marketplace add jose-compu/claude-code-semantic-memory
-/plugin install semantic-memory
-```
-
-MCP **`logosdb`** runs **`/bin/sh`** + **`scripts/logosdb-mcp-wrap.sh`** (see **`.claude-plugin/plugin.json`**, mirrored in **`.mcp.json`**). Wrapper sets **`LOGOSDB_PATH`**, **`LOGOSDB_INDEX_ROOT`**, and **`cd`** from **`CLAUDE_PROJECT_DIR`** when present ([claude-code#42687](https://github.com/anthropics/claude-code/issues/42687)). **`claude --debug`** if tools are missing.
 
 ## Install (user-wide `~/.claude.json`) — recommended for stable `LOGOSDB_PATH`
 

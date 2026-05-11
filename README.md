@@ -5,8 +5,8 @@ Custom [Claude Code](https://docs.anthropic.com/en/docs/claude-code/overview) sk
 ## Install (plugin)
 
 ```text
-/plugin marketplace add jose-compu/claude-code-skills
-/plugin install claude-code-skills
+/plugin marketplace add jose-compu/claude-code-semantic-memory
+/plugin install semantic-memory
 ```
 
 ## Skills

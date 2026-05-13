@@ -2,8 +2,8 @@
 name: semantic-memory
 description: "LogosDB semantic memory plugin: MCP wrap.sh, incremental /index (mcp ≥0.7.11; ≥0.7.12 if client shows 0 tools). Instructions require /index . on every Claude session load when plugin is active. Triggers: semantic memory, LogosDB, logosdb MCP, semantic-memory plugin."
 metadata:
-  version: "0.2.8"
-  last_updated: "2026-05-11"
+  version: "0.2.9"
+  last_updated: "2026-05-13"
   status: active
   data_access_level: raw
   task_type: outcome-gradable
@@ -158,29 +158,68 @@ cp "$PLUGIN_ROOT/skills/semantic-memory/.claude/commands/"*.md .claude/commands/
 
 ---
 
-## 7. `CLAUDE.md` — agent instructions (adapted)
+## 7. `CLAUDE.md` — drop-in template
 
-The MCP server does not index the repository by itself: **call the tools**, or use plugin slash skills **`/index`**, **`/search`**, **`/forget`**. Add the following to the project’s **`CLAUDE.md`** (or equivalent). Adjust namespaces and paths.
+The MCP server does not index the repository by itself: **call the tools**, or use the plugin slash skills **`/index`**, **`/search`**, **`/forget`**. A ready-to-paste block lives at **[`references/claude-md-template.md`](references/claude-md-template.md)** — copy everything between the `BEGIN`/`END` markers into the project's **`CLAUDE.md`**. Verbatim copy:
 
 ```markdown
-## LogosDB (semantic memory via MCP)
+## Semantic Memory (LogosDB)
 
-The **logosdb** MCP server is configured (this workspace uses the **semantic-memory** plugin). Vector data lives under **`LOGOSDB_PATH`** (default **`$CLAUDE_PROJECT_DIR/.logosdb`** when the wrapper runs under Claude Code — add **`.logosdb/`** to **`.gitignore`** if needed).
+The **semantic-memory** plugin is active for this workspace. Vector data lives in `.logosdb/` (git-ignored). The plugin provides three slash commands that work without any extra setup.
 
-**Namespaces:** Use separate namespaces (e.g. `code` for `src/`, `docs` for `docs/`, `decisions` for short notes). Search the namespace that matches the task.
+### Session start — mandatory
 
-**On every session start (semantic-memory plugin active):** immediately run **`/index .`** (default namespace **`code`**, **`incremental: true`**) so the vector index matches disk before other work. Equivalent: **`logosdb_index_file`** with **`path: "."`**. For **very large** repos, replace **`.`** with a narrower root (e.g. **`./src`**) and document that exception in this section so every session still starts with one incremental index pass.
+**Run `/index .` at the start of every session** before doing other work. This incrementally refreshes the full index (only changed/new files are re-embedded; unchanged files are skipped, so it is fast).
 
-**When starting substantive work on this codebase:**
-1. After the mandatory **`/index .`** (or project override), if you still need more context, call **`logosdb_index_file`** with **`incremental: true`** on additional paths (e.g. **`docs/`**) or run **`/index`** on those paths.
-2. Before “where is X implemented?”, call **`logosdb_search`** or **`/search`** with a tight query, appropriate `namespace`, `top_k` **3–8**. Retrieve, then open only cited files.
-3. For recent decisions, **`logosdb_search`** with optional **`ts_from` / `ts_to`** on `decisions` or `docs` when timestamps matter.
-4. For durable facts, **`logosdb_index`** (or document via **`/index`** flows) into the right namespace.
+\`\`\`text
+/index .
+\`\`\`
 
-**After large refactors or dependency upgrades:** **`logosdb_index_file`** with **`incremental: true`** on affected paths (or **`/index`**) so only changed files pay embedding cost.
+### Slash commands
 
-**Deletion:** **`logosdb_delete`** or **`/forget`** by `id` or semantic `query`.
+| Command | What it does |
+|---------|--------------|
+| `/index <path>` | Index or re-index a file or directory (incremental by default). Use `.` for the whole project, or a subdirectory/file for targeted refresh. |
+| `/search <query>` | Semantic search over indexed content. Returns ranked file matches. Accepts `--top-k=n` (default 5), `--namespace=name` (default `code`), and optional ISO timestamp bounds (`--from-ts`, `--to-ts`). |
+| `/forget <query or --id=n>` | Delete indexed chunks by semantic query match or by row id. |
+
+### Namespaces
+
+- **`code`** (default) — source files and general project content
+- `docs` — documentation-only searches (`--namespace=docs` / `-n docs`)
+- `decisions` — durable architectural or research notes
+
+### Conversational / background use (keep output quiet)
+
+When you (the agent) call `logosdb_search` directly during normal conversation — not via `/search` — keep `top_k` 3–5, cite source files briefly (e.g. `src/foo.ts`), and **do not quote the full chunk text** in the final answer.
+
+### When to re-index
+
+- After pulling / merging changes: `/index .`
+- After editing a specific file: `/index <file>`
+- Before a broad search when files may have changed since last index
+
+### Forcing a re-index
+
+`/index` is incremental, so unchanged files are skipped (`skipped_files: 1, indexed_files: 0` is a cache hit, not an error). To force a rebuild: `touch <file>` then `/index <file>`, or delete `.logosdb/<namespace>/` and `.logosdb/_logosdb_mcp_manifests/<namespace>.json` and re-index.
+
+### Opting out of auto-index
+
+If the repo is very large, replace `/index .` above with a narrower path (e.g. `/index ./src`) and document the choice here.
 ```
+
+---
+
+## 7b. Quiet / less-verbose output
+
+The Claude Code TUI auto-renders every MCP tool call as a JSON box; that rendering is client-side and the plugin cannot suppress it. What the plugin **does** control is the assistant's prose response. The skills enforce concise output:
+
+- **`/index`** — exactly one line: `Indexed {indexed} chunks · {indexed_files} updated · {skipped_files} skipped · {pruned_files} pruned → '{namespace}'`.
+- **`/search`** — one header line + numbered `path (score: …)` lines. **No** chunk text, **no** raw JSON.
+- **`/forget`** — exactly one line: `Deleted id {id} …`.
+- **Background `logosdb_search` (no slash command)** — `top_k` 3–5; the assistant cites file paths and paraphrases instead of quoting chunks.
+
+If the JSON tool-call box itself is still too noisy, lower `top_k` (each chunk in the result inflates the box). For headless / scripting use, `claude --output-format text` and `--quiet` reduce surrounding chatter; check `claude --help` on your build for the exact flags.
 
 ---
 

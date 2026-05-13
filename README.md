@@ -62,11 +62,17 @@ Store vectors under **`~/.claude/.logosdb`** (one tree for all projects) and reg
 
 **`/index`** uses **`logosdb_index_file`** with **`incremental: true`** (new/changed files only; needs **`logosdb-mcp-server` ≥ 0.7.11**). With the plugin active, project **`CLAUDE.md`** should require the agent to run **`/index .`** on **every Claude session load** before other work (see [`skills/semantic-memory/SKILL.md`](skills/semantic-memory/SKILL.md) — Prerequisites plugin contract, §4c, §7 template). Hooks can enforce this if you need a guarantee beyond model instructions.
 
+All three skills enforce **concise output** (one-line for `/index` and `/forget`; header + numbered file/score lines for `/search`) and tell the agent **not** to dump the raw MCP JSON or chunk text in its prose answer. Background `logosdb_search` calls (used during normal conversation) follow the same quiet rule. See [`skills/semantic-memory/SKILL.md` §7b](skills/semantic-memory/SKILL.md).
+
 | Command | Skill |
 |---------|--------|
 | `/index` | [`skills/index/SKILL.md`](skills/index/SKILL.md) |
 | `/search` | [`skills/search/SKILL.md`](skills/search/SKILL.md) |
 | `/forget` | [`skills/forget/SKILL.md`](skills/forget/SKILL.md) |
+
+## `CLAUDE.md` drop-in template
+
+Paste the block from [`skills/semantic-memory/references/claude-md-template.md`](skills/semantic-memory/references/claude-md-template.md) into the project's **`CLAUDE.md`** to wire up: mandatory `/index .` at session start, the slash-command table, namespace conventions, quiet-mode guidance for background searches, and instructions for forcing a re-index when `incremental: true` reports `skipped_files`. The same block is reproduced inline in [`skills/semantic-memory/SKILL.md` §7](skills/semantic-memory/SKILL.md).
 
 Optional project-only prompts (without the plugin): copy [`skills/semantic-memory/.claude/commands/`](skills/semantic-memory/.claude/commands/) into **`.claude/commands/`** (same idea as upstream LogosDB).
 

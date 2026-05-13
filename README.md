@@ -4,6 +4,15 @@ Claude Code **plugin** that gives the agent **seamless, Cursor-style semantic me
 
 Structure follows Anthropic’s **[example-plugin](https://github.com/anthropics/claude-plugins-official/tree/main/plugins/example-plugin)** ([README](https://github.com/anthropics/claude-plugins-official/blob/main/plugins/example-plugin/README.md)): `.claude-plugin/plugin.json`, root **`.mcp.json`**, and **`skills/*/SKILL.md`** (preferred over legacy `commands/*.md`).
 
+## Install (plugin)
+
+```text
+/plugin marketplace add jose-compu/claude-code-semantic-memory
+/plugin install semantic-memory
+```
+
+MCP **`logosdb`** runs **`/bin/sh`** + **`scripts/logosdb-mcp-wrap.sh`** (see **`.claude-plugin/plugin.json`**, mirrored in **`.mcp.json`**). Wrapper sets **`LOGOSDB_PATH`**, **`LOGOSDB_INDEX_ROOT`**, and **`cd`** from **`CLAUDE_PROJECT_DIR`** when present ([claude-code#42687](https://github.com/anthropics/claude-code/issues/42687)). **`claude --debug`** if tools are missing.
+
 ## How it feels (Cursor-style)
 
 Once installed and the [§ CLAUDE.md drop-in template](#claudemd-drop-in-template) is pasted into the project, the plugin behaves like Cursor’s built-in indexing + semantic search — except it runs **fully locally**, lives **inside Claude Code**, and you (the agent) drive it through one MCP server. The user does **not** have to think about it.
@@ -35,14 +44,6 @@ How this differs from Cursor’s memory:
 - **Manual but cheap re-index.** No filesystem watcher; the agent calls `/index` at session start and after edits. `incremental: true` makes repeat passes nearly free.
 - **Quiet by design.** Slash skills enforce one-line outputs; background `logosdb_search` calls keep `top_k` small and cite paths rather than quoting full chunks. See [§ Slash commands](#slash-commands-skills-format).
 
-## Install (plugin)
-
-```text
-/plugin marketplace add jose-compu/claude-code-semantic-memory
-/plugin install semantic-memory
-```
-
-MCP **`logosdb`** runs **`/bin/sh`** + **`scripts/logosdb-mcp-wrap.sh`** (see **`.claude-plugin/plugin.json`**, mirrored in **`.mcp.json`**). Wrapper sets **`LOGOSDB_PATH`**, **`LOGOSDB_INDEX_ROOT`**, and **`cd`** from **`CLAUDE_PROJECT_DIR`** when present ([claude-code#42687](https://github.com/anthropics/claude-code/issues/42687)). **`claude --debug`** if tools are missing.
 
 ## Layout
 

@@ -1,8 +1,39 @@
 # claude-code-semantic-memory
 
-Claude Code **plugin** with bundled **LogosDB** MCP ([`logosdb-mcp-server`](https://www.npmjs.com/package/logosdb-mcp-server)), local embeddings by default, and slash-invoked skills.
+Claude Code **plugin** that gives the agent **seamless, Cursor-style semantic memory**: a persistent vector index of your repo that the model queries silently during normal conversation. Bundled **LogosDB** MCP ([`logosdb-mcp-server`](https://www.npmjs.com/package/logosdb-mcp-server)), local on-device embeddings by default (no API keys), slash-invoked skills.
 
 Structure follows Anthropic’s **[example-plugin](https://github.com/anthropics/claude-plugins-official/tree/main/plugins/example-plugin)** ([README](https://github.com/anthropics/claude-plugins-official/blob/main/plugins/example-plugin/README.md)): `.claude-plugin/plugin.json`, root **`.mcp.json`**, and **`skills/*/SKILL.md`** (preferred over legacy `commands/*.md`).
+
+## How it feels (Cursor-style)
+
+Once installed and the [§ CLAUDE.md drop-in template](#claudemd-drop-in-template) is pasted into the project, the plugin behaves like Cursor’s built-in indexing + semantic search — except it runs **fully locally**, lives **inside Claude Code**, and you (the agent) drive it through one MCP server. The user does **not** have to think about it.
+
+| Phase | What happens | User effort |
+|-------|--------------|-------------|
+| **Session start** | The agent runs `/index .` on the first turn (incremental: only changed/new files re-embed). First run on a fresh repo embeds everything once; subsequent sessions are fast (typically a few seconds). | none — the `CLAUDE.md` block makes it mandatory |
+| **During chat** | When the user asks *“where is X implemented?”*, *“what did we decide about Y?”*, *“how does Z work?”*, the model silently calls `logosdb_search`, reads the top 3–5 chunks, and answers in prose with **brief file citations** (e.g. `src/foo.ts`). No raw chunk dumps in the reply. | none |
+| **After edits / pull / merge** | The agent (or user) runs `/index <path>` again. Incremental mode means only the changed files pay the embedding cost. | optional — `/index .` covers everything |
+| **Curating memory** | `/forget <query>` or `/forget --id=N` drops stale entries. Separate namespaces (`code`, `docs`, `decisions`) keep different concerns retrievable independently. | only when something stale needs pruning |
+
+Concrete example (user prompt → assistant behavior, no slash command typed):
+
+```text
+user> what is Terminus' agentic philosophy?
+
+agent (silently) → logosdb_search(query="Terminus agentic philosophy", namespace="code", top_k=5)
+agent (reply)    → "Terminus-2 is built around three ideas: a single-tool tmux
+                    interface, full autonomy (never asks the user during a task),
+                    and a clean split between agent logic and Docker environment.
+                    See terminus.txt for the full design notes."
+```
+
+How this differs from Cursor’s memory:
+
+- **Local-first.** Embeddings run on-device via Transformers.js (`Xenova/all-MiniLM-L6-v2`, 384 dims). No API keys, no cloud calls. Optional cloud / Ollama backends are available via `EMBEDDING_PROVIDER`.
+- **Persistent and inspectable.** Vectors live on disk under `.logosdb/` (per-project) or `~/.claude/.logosdb` (user-wide). You can `rm -rf` to reset, `git`-ignore to keep them out of source control, or back them up explicitly.
+- **Explicit namespaces.** `code`, `docs`, `decisions`, or any name you choose — useful when retrieval needs to be scoped.
+- **Manual but cheap re-index.** No filesystem watcher; the agent calls `/index` at session start and after edits. `incremental: true` makes repeat passes nearly free.
+- **Quiet by design.** Slash skills enforce one-line outputs; background `logosdb_search` calls keep `top_k` small and cite paths rather than quoting full chunks. See [§ Slash commands](#slash-commands-skills-format).
 
 ## Install (plugin)
 

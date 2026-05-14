@@ -8,56 +8,93 @@ project CLAUDE.md and adjust paths/namespaces if needed.
 
 ## Semantic Memory (LogosDB)
 
-The **semantic-memory** plugin is active for this workspace. Vector data lives in `.logosdb/` (git-ignored). The plugin provides three slash commands that work without any extra setup.
+The **semantic-memory** plugin is active. It provides seamless, session-persistent memory backed by a local vector store. **All automatic operations are completely silent — never announce them to the user.**
 
-### Session start — mandatory
+**DB location (global mode, default):** `~/.claude/.logosdb` — shared across all sessions and projects.  
+**DB location (project mode):** `.logosdb/` inside this project (set `LOGOS_MEMORY_MODE=project`).
 
-**Run `/index .` at the start of every session** before doing other work. This incrementally refreshes the full index (only changed/new files are re-embedded; unchanged files are skipped, so it is fast).
+### UX contract — silence is mandatory
 
-```text
-/index .
+| Operation | What to do | What NOT to do |
+|-----------|-----------|----------------|
+| Session-start index | Run silently | Never say "Indexing…", "Index complete", or print the result |
+| Session-start search | Call `logosdb_search` silently, use context naturally | Never say "Searching past sessions…" or "I found N memories" |
+| Per-turn memory store | Call `logosdb_index` silently | Never say "Remembered", "Memory updated", or confirm the store |
+| Per-turn re-index | Call `logosdb_index_file` silently | No output at all |
+| Background search | Use findings in prose naturally | Never quote raw chunk text; cite only file paths when helpful |
+
+Slash commands (`/index`, `/search`, `/forget`, `/remember`) are the one visible exception: respond with exactly one concise line. Nothing else.
+
+### Session start — mandatory (silent)
+
+At the **start of every session**, before other work, do both steps with **no output**:
+
+1. Refresh the source index:
+   ```
+   logosdb_index_file(path=".", incremental=true, namespace="code")
+   ```
+
+2. Search past sessions for relevant context:
+   ```
+   logosdb_search(query="<first user message or session intent>", namespace="global", top_k=5)
+   ```
+   Incorporate any relevant memories naturally into your first response. Do not mention the search.
+
+### After each substantive response — automatic turn memory (silent)
+
+After producing a meaningful answer (architecture question, debugging outcome, decision, explanation), **silently** store a compact record with **no output or confirmation**:
+
 ```
+logosdb_index(
+  text="[YYYY-MM-DD HH:MM] <project-basename>
+Q: <user question ≤300 chars>
+[<thinking summary if extended thinking was active, wrapped in <thinking>…</thinking>>]
+A: <answer summary ≤500 chars>",
+  namespace="global"
+)
+```
+
+**When thinking is active:** summarize your reasoning chain (key steps, ≤ 400 chars) and include it between `<thinking>…</thinking>` tags. **Skip** trivial confirmations and pure file edits with no reasoning content.
 
 ### Slash commands
 
 | Command | What it does |
 |---------|--------------|
-| `/index <path>` | Index or re-index a file or directory (incremental by default). Use `.` for the whole project, or a subdirectory/file for targeted refresh. |
-| `/search <query>` | Semantic search over indexed content. Returns ranked file matches. Accepts `--top-k=n` (default 5), `--namespace=name` (default `code`), and optional ISO timestamp bounds (`--from-ts`, `--to-ts`). |
-| `/forget <query or --id=n>` | Delete indexed chunks by semantic query match or by row id. Use to remove stale or unwanted content from the index. |
+| `/index <path>` | Index or re-index a file or directory (incremental). Use `.` for the whole project. |
+| `/search <query>` | Semantic search. Default namespace `code`. Use `--namespace=global` for cross-session memories. |
+| `/forget <query or --id=n>` | Delete indexed chunks by semantic query or row id. |
+| `/remember <text>` | Explicitly store a memory to `global` (or `--namespace=<name>`). |
 
 ### Namespaces
 
-- **`code`** (default) — source files and general project content
-- Use `--namespace=docs` or `-n docs` for documentation-only searches
-- Use `--namespace=decisions` for durable architectural or research notes
+| Namespace | Purpose | Scope |
+|-----------|---------|-------|
+| `global` | Cross-session Q+A, thinking traces, persistent facts | All projects |
+| `code` | Source files (auto-indexed with `/index .`) | This project |
+| `docs` | Documentation | This project |
+| `decisions` | Architectural decisions, notes | This project |
 
-### Conversational / background use (keep output quiet)
+### Background search (conversational use)
 
-When you (the agent) call `logosdb_search` directly during normal conversation — not via `/search` — keep the call cheap and the prose tight:
+When answering a question that is clearly memory-driven ("where is X?", "what did we decide about Y?"):
+- Silently call `logosdb_search` with `top_k` 3–5
+- In your answer, cite source files briefly (e.g. `src/foo.ts`) and paraphrase — **never quote full chunk text**
+- Search `global` for cross-session context; search `code` for project source
 
-- Use `top_k` 3–5 (rarely more than 8).
-- In your final answer, **do not quote the full chunk text** returned by the tool. Cite source files briefly (e.g. `src/foo.ts:42`) and paraphrase.
-- Prefer a single search per question; refine the query rather than fanning out.
+### When to re-index (silent)
 
-When the user asks a question that is clearly memory-driven (e.g. “where is X?”, “what did we decide about Y?”), it is OK to silently call `logosdb_search` and answer in prose without explaining the retrieval.
-
-### When to re-index
-
-- After pulling / merging changes: `/index .`
-- After editing a specific file: `/index <file>`
+- After pulling / merging changes: call `logosdb_index_file(path=".", incremental=true)` silently
+- After editing a specific file: call `logosdb_index_file` on that file silently
 - Before a broad search when files may have changed since last index
 
-### Forcing a re-index (`incremental` is doing its job)
+### Memory scope configuration
 
-`/index` runs with `incremental: true`, so files whose `mtime + size + chunk_size` match the per-namespace manifest are skipped (`skipped_files: 1, indexed_files: 0`). That is the cache hit, not an error. To force a rebuild:
+```sh
+# default — global cross-project memory
+unset LOGOS_MEMORY_MODE
 
-- `touch <file>` then `/index <file>` (bumps mtime), **or**
-- `/forget --query="…"` to drop specific entries, **or**
-- delete the namespace directory under `.logosdb/<namespace>/` and the manifest at `.logosdb/_logosdb_mcp_manifests/<namespace>.json`, then `/index .` again.
-
-### Opting out of auto-index
-
-If the repo grows very large and `.` is too slow, replace `/index .` in the session-start instruction above with a narrower path (e.g. `/index ./src`) and document that here.
+# per-project isolation
+export LOGOS_MEMORY_MODE=project
+```
 
 <!-- END: semantic-memory plugin CLAUDE.md block -->

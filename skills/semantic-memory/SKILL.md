@@ -1,9 +1,9 @@
 ---
 name: semantic-memory
-description: "LogosDB semantic memory plugin: MCP wrap.sh, incremental /index (mcp ≥0.7.11; ≥0.7.12 if client shows 0 tools). Instructions require /index . on every Claude session load when plugin is active. Triggers: semantic memory, LogosDB, logosdb MCP, semantic-memory plugin."
+description: "LogosDB semantic memory plugin: global cross-session memory, thinking-trace storage, incremental /index, /remember, /search, /forget. Triggers: semantic memory, LogosDB, logosdb MCP, semantic-memory plugin, global memory, thinking traces."
 metadata:
-  version: "0.2.9"
-  last_updated: "2026-05-13"
+  version: "0.3.0"
+  last_updated: "2026-05-14"
   status: active
   data_access_level: raw
   task_type: outcome-gradable
@@ -14,6 +14,25 @@ metadata:
 This plugin ships the **logosdb** MCP server and guidance for **semantic, session-persistent memory** using [`logosdb-mcp-server`](https://www.npmjs.com/package/logosdb-mcp-server). **`mcpServers`** are declared in **`.claude-plugin/plugin.json`** (mirrored in **`.mcp.json`**) per [Claude Code MCP — plugins](https://docs.anthropic.com/en/docs/claude-code/mcp/) (stdio `command` + `args`, typically `npx` + `-y`). This repo uses a small **shell launcher** so **`CLAUDE_PROJECT_DIR`**, **`LOGOSDB_PATH`**, and **`LOGOSDB_INDEX_ROOT`** behave for [user-scoped plugins](https://github.com/anthropics/claude-code/issues/42687). Slash skills: **`skills/<name>/SKILL.md`** ([example-plugin](https://github.com/anthropics/claude-plugins-official/tree/main/plugins/example-plugin)). Upstream: [LogosDB README](https://github.com/jose-compu/logosdb/blob/main/README.md#claude-code-complete-recipe), [`mcp/README.md`](https://github.com/jose-compu/logosdb/blob/main/mcp/README.md).
 
 **Default behavior:** omit `EMBEDDING_PROVIDER` so the server uses **on-device Transformers.js** (`Xenova/all-MiniLM-L6-v2`, 384 dims). First run may download model weights to the normal Transformers.js cache. No cloud API keys are required for that path.
+
+---
+
+## UX rules — silent by design
+
+**All automatic memory operations must be invisible to the user.** The plugin runs in the background and the user should never feel interrupted or overwhelmed.
+
+| Operation | Rule |
+|-----------|------|
+| Session-start `/index .` | Run it, print nothing. No "Indexing…", no progress, no summary. |
+| Session-start `logosdb_search global` | Never announce the search. Never say "I found N memories." Incorporate relevant context naturally. |
+| Per-turn `logosdb_index` (turn record) | Completely silent. No confirmation, no "Remembered.", no tool JSON. |
+| Per-turn incremental re-index | Completely silent. |
+| Background `logosdb_search` during conversation | Do not announce the tool call. Do not quote chunk text. Cite file paths inline when relevant. |
+| Session compaction handoff note | Completely silent. |
+
+**User-invoked slash commands** (`/index`, `/search`, `/forget`, `/remember`) are the one exception: they respond with exactly one concise line (see §7b). No raw JSON, no multi-line dumps.
+
+**Never say:** "I am indexing your project", "Memory updated", "Searching past sessions…", "I found N relevant memories", "Stored a turn record", or any similar announcement for automatic operations.
 
 ---
 
@@ -101,15 +120,90 @@ On macOS, **`timeout`** may be missing; use **`sleep` + `kill`** as above. **`np
 
 ## 4c. When to re-index — agent behavior
 
-Claude Code **does not** run filesystem watchers for skills. **You** (the agent) must follow this cadence when **semantic-memory** is active:
+Claude Code **does not** run filesystem watchers for skills. **You** (the agent) must follow this cadence when **semantic-memory** is active. **All indexing steps are silent — no output, no progress, no summary lines.**
 
-1. **Every Claude session / load (mandatory):** run **`/index .`** (or equivalent **`logosdb_index_file`** with **`path: "."`**, **`incremental: true`**, default **`namespace: "code"`**) as the **first** indexing step after the workspace is available. This refreshes the **whole tree under cwd** incrementally; most files should show **`skipped_files`** if unchanged. If the repo is enormous and **`CLAUDE.md`** narrows the policy (e.g. only **`./src`**), use that path instead of **`.`** — but the default plugin instruction is **`/index .`**.
-2. **After the user (or you) edits multiple files** in a subtree: run **`/index <subpath>`** or **`logosdb_index_file`** with **`incremental: true`** on that subtree.
-3. **Before a broad `logosdb_search`** when the conversation implies files changed since the last index (merge, pull, refactor): optional quick incremental pass on the affected path.
+1. **Every Claude session / load (mandatory, silent):** call **`logosdb_index_file`** with **`path: "."`**, **`incremental: true`**, **`namespace: "code"`** silently before other work. This refreshes the whole tree incrementally. Do not print the result.
+2. **After editing multiple files** in a subtree: call **`logosdb_index_file`** with **`incremental: true`** on that subtree, silently.
+3. **Before a broad `logosdb_search`** when files may have changed: optional quick incremental pass, silently.
 
 Do **not** spam full non-incremental re-indexes of huge trees every turn — use **`incremental: true`** ( **`/index`** already does).
 
 Optional automation outside skills: [Claude Code hooks](https://docs.anthropic.com/en/docs/claude-code/hooks-guide) (e.g. react to **`FileChanged`**) can run a script that calls **`logosdb_index_file`** with **`incremental: true`** on a configured subtree; keep **`LOGOSDB_PATH`** private to the project.
+
+---
+
+## 4d. Memory scope — global vs project (`LOGOS_MEMORY_MODE`)
+
+The wrapper script reads **`LOGOS_MEMORY_MODE`** (default: **`global`**):
+
+| Mode | `LOGOSDB_PATH` | Session memories stored in | Search scope |
+|------|----------------|---------------------------|--------------|
+| **`global`** (default) | `~/.claude/.logosdb` | `global` namespace, visible from **all** future sessions and projects | `global` + `code` (current project) |
+| **`project`** | `<project>/.logosdb` | `decisions` or project namespace, isolated to this repo | project namespaces only |
+
+Set in your shell profile to make it persistent:
+
+```sh
+# default — nothing needed
+# or for per-project isolation:
+export LOGOS_MEMORY_MODE=project
+```
+
+**Namespaces at a glance:**
+
+| Namespace | Purpose | Scope |
+|-----------|---------|-------|
+| `global` | Cross-session Q+A, thinking traces, persistent facts | All projects |
+| `code` | Source code chunks (incremental file index) | Current project |
+| `docs` | Documentation | Current project |
+| `decisions` | Architectural decisions, notes | Current project |
+
+---
+
+## 4e. Automatic cross-session turn memory
+
+**You (the agent) must follow this cadence** when `semantic-memory` is active. **All steps are completely silent — no output, no announcements, no confirmations.**
+
+### Session start (in addition to `/index .`)
+
+After indexing, silently search the `global` namespace for context relevant to what the user is about to do:
+
+```
+logosdb_search(query="<first user message or session context>", namespace="global", top_k=5)
+```
+
+Use any retrieved memories to inform your first response. **Do not announce the search, do not say "I found N memories", do not quote raw results** — incorporate relevant context naturally and invisibly.
+
+### After each substantive response
+
+After producing an answer that involved meaningful reasoning or new information, **silently** store a compact turn record using `logosdb_index`. **Do not say "Remembered", do not confirm the store, produce no output at all:**
+
+```
+logosdb_index(
+  text="[YYYY-MM-DD HH:MM] <project-basename>\nQ: <user-question (≤300 chars)>\n<thinking-summary-if-available>\nA: <answer-summary (≤500 chars)>",
+  namespace="global"   // or project namespace if LOGOS_MEMORY_MODE=project
+)
+```
+
+**What counts as substantive:** answers to architecture questions, debugging outcomes, decisions made, code explanations, anything worth knowing in a future session. Skip trivial confirmations or pure file edits with no reasoning.
+
+### Thinking traces
+
+When extended thinking is active, Claude's reasoning chain is available during the response. After completing a turn that involved significant reasoning:
+
+1. Summarize the key steps of the reasoning (≤ 400 chars)
+2. Include it in the stored record wrapped in `<thinking>…</thinking>`:
+
+```
+[2026-05-14 12:52] my-project
+Q: How does the auth middleware work?
+<thinking>
+Traced call chain: router → authMiddleware → jwtVerify → next(). Key issue was missing refresh-token rotation on 401.
+</thinking>
+A: Auth middleware calls jwtVerify on every request; missing rotation was causing infinite 401 loops on expired tokens.
+```
+
+This makes reasoning patterns searchable across future sessions.
 
 ---
 
@@ -139,6 +233,7 @@ Per [example-plugin README — Skills](https://github.com/anthropics/claude-plug
 | [`skills/index/SKILL.md`](../index/SKILL.md) | **`/index`** (top-level skill name **`index`**) |
 | [`skills/search/SKILL.md`](../search/SKILL.md) | **`/search`** |
 | [`skills/forget/SKILL.md`](../forget/SKILL.md) | **`/forget`** |
+| [`skills/remember/SKILL.md`](../remember/SKILL.md) | **`/remember`** — store a memory to `global` or any namespace |
 
 Some Claude Code builds also expose the copies under **[`skills/semantic-memory/.claude/commands/`](../semantic-memory/.claude/commands/index.md)** as **`/semantic-memory:index`** (and similarly **`…:search`** / **`…:forget`**). Those prompts call the **same** MCP tools (**`logosdb_index_file`**, **`logosdb_search`**, **`logosdb_delete`**); naming is client UI only, not the MCP contract.
 
@@ -262,9 +357,12 @@ Use this skill for **LogosDB**, **logosdb MCP**, **semantic / persistent memory*
 Prefer slash commands when available:
 
 - **`/index`** — **First on each session:** **`/index .`** when **semantic-memory** is active (then narrower paths as needed). Always **`incremental: true`** (cheap when little changed).
-- **`/search`** — semantic lookup, “where is X”, prior decisions.
+- **`/search`** — semantic lookup, "where is X", prior decisions. Use `--namespace=global` to search cross-project memories.
 - **`/forget`** — delete by id or semantic query.
+- **`/remember`** — explicitly store a memory to `global` (or any namespace with `--namespace`).
 
-Fallback MCP tools: `logosdb_index_file`, `logosdb_search`, `logosdb_delete`.
+Fallback MCP tools: `logosdb_index_file`, `logosdb_search`, `logosdb_delete`, `logosdb_index`.
 
-**Default namespaces:** `code` (source), `docs` (documentation), `decisions` (durable decisions).
+**Default namespaces:** `global` (cross-session memories + thinking traces), `code` (source), `docs` (documentation), `decisions` (durable decisions).
+
+**Memory scope:** controlled by `LOGOS_MEMORY_MODE` env var (`global` = default, `project` = per-repo isolation). See §4d.

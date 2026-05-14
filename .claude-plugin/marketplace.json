@@ -4,13 +4,13 @@
     "name": "Jose Ignacio",
     "url": "https://github.com/jose-compu"
   },
-  "description": "Semantic memory plugin — LogosDB MCP (.mcp.json), local embeddings, slash commands, skills/ guidance.",
+  "description": "Semantic memory plugin — global cross-session memory, thinking traces, LOGOS_MEMORY_MODE, /remember, LogosDB MCP, local embeddings, /index /search /forget, CLAUDE.md template.",
   "plugins": [
     {
       "name": "semantic-memory",
       "source": "./",
-      "description": "LogosDB MCP (wrap: cd, LOGOSDB_INDEX_ROOT, npm exec/npx), concise /index /search /forget, CLAUDE.md drop-in template, fallback JSON.",
-      "version": "0.2.9",
+      "description": "Global cross-session memory + thinking-trace storage. LogosDB MCP (wrap.sh), LOGOS_MEMORY_MODE scope, /remember /index /search /forget, CLAUDE.md template.",
+      "version": "0.3.0",
       "license": "MIT"
     }
   ]
